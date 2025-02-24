@@ -36,3 +36,19 @@
     transform: rotate(360deg);
   }
 }
+
+.logout-btn {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  padding: 5px 10px;
+  transition: background 0.3s;
+  margin-bottom: 20px;
+}
+
+.logout-btn:hover {
+  background: #c82333;
+}
+

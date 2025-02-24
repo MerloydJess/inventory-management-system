@@ -1,0 +1,55 @@
+.employee-panel {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  .employee-panel h2 {
+    text-align: center;
+    color: #333;
+  }
+  
+  .employee-panel input[type="text"] {
+    width: 80%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .sorting {
+    text-align: right;
+    margin-bottom: 20px;
+  }
+  
+  .sorting select {
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+  
+  .product-list {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  
+  .product-list th,
+  .product-list td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+  }
+  
+  .product-list th {
+    background: #f4f4f4;
+    color: #333;
+  }
+  
+  .product-list tr:hover {
+    background: #f1f1f1;
+  }
+  
