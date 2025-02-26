@@ -88,4 +88,24 @@
     padding: 10px;
     box-sizing: border-box;
   }
+  .logout-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    padding: 5px 15px;
+    width: auto;
+    min-width: 80px;  /* Make it shorter */
+    transition: background 0.3s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+  }
+  
+  .logout-btn:hover {
+    background: #c82333;
+  }
   
