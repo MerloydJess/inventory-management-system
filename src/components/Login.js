@@ -1,8 +1,6 @@
-// src/components/Login.js
 import axios from 'axios';
 import './Login.css';
 import React, { useState, useEffect } from 'react';
-
 
 const Login = ({ onLogin }) => {
   const [name, setName] = useState('');
@@ -14,22 +12,23 @@ const Login = ({ onLogin }) => {
     setPassword('');
     setError('');
   }, []);
-  
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    axios.post('http://localhost:5000/login', { name, password })
-      .then(res => {
-        if (res.data.role) {
-          onLogin(res.data.role, name); // Pass name to App.js
-        } else {
-          setError('Invalid name or password.');
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        setError('Error connecting to the server.');
-      });
+    setError(''); // Clear previous errors
+
+    try {
+      const res = await axios.post('http://localhost:5000/login', { name, password });
+
+      if (res.data.role) {
+        onLogin(res.data.role, name); // Pass name to App.js
+      } else {
+        setError('Invalid name or password.');
+      }
+    } catch (err) {
+      console.error('Login error:', err.response?.data || err.message);
+      setError(err.response?.data?.error || 'Error connecting to the server.');
+    }
   };
 
   return (

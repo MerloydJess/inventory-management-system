@@ -5,18 +5,18 @@ import './EmployeePanel.css';
 const EmployeePanel = ({ userName }) => {
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortOption, setSortOption] = useState('article');  // Default sorting by article
+  const [sortOption, setSortOption] = useState('article');  // Sort by article
 
   // Fetch products assigned to the logged-in user
   const fetchProducts = () => {
     axios.get(`http://localhost:5000/get-products/${userName}`)
       .then(res => {
-        console.log('Fetched Products:', res.data);  // <-- Debug here
+        console.log('Fetched Products:', res.data);
         setProducts(res.data);
       })
       .catch(err => console.error(err));
   };
-    
+
   useEffect(() => {
     if (userName) {
       fetchProducts();
@@ -31,7 +31,7 @@ const EmployeePanel = ({ userName }) => {
     setSortOption(e.target.value);
   };
 
-  // Enhanced Filtering and Sorting
+  // Filtering and Sorting
   const filteredProducts = products
     .filter(product =>
       product.article.toLowerCase().includes(searchTerm.toLowerCase()) ||
