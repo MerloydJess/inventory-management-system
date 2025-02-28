@@ -1,6 +1,6 @@
 .employee-panel {
   max-width: 1000px;
-  margin: 0 auto;
+  margin: 20px auto;
   padding: 20px;
   background: #ffffff;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -11,48 +11,51 @@
 .employee-panel h2 {
   margin-bottom: 20px;
   color: #333;
-  text-align: center;
+  font-size: 22px;
 }
 
-.employee-panel input [type="text"] {
-  width: 100%;
+.employee-panel input, .employee-panel select {
+  width: 95%;
   padding: 10px;
   margin: 10px 0;
-  box-sizing: border-box;
-  border: 1px solid #333;
+  border: 1px solid #ccc;
   border-radius: 5px;
-  outline: none;
   transition: border-color 0.3s;
 }
 
-.employee-panel input:focus {
+.employee-panel input:focus, .employee-panel select:focus {
   border-color: #007bff;
 }
 
 .sorting {
-  margin: 10px 0;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.sorting select {
+  padding: 8px;
+  border-radius: 5px;
 }
 
 .product-list {
   width: 100%;
   border-collapse: collapse;
-  background:#fff;
+  background: #fff;
   border-radius: 10px;
   overflow: hidden;
 }
 
-.product-list th,
-.product-list td {
-  color:#333;
+.product-list th, .product-list td {
   padding: 10px;
-  text-align: left;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
 }
 
 .product-list th {
-  background: #ffffff;
-  color: #333;
+  background: #f8f9fa;
   font-weight: bold;
-  text-transform: uppercase;
   font-size: 14px;
 }
 
@@ -64,6 +67,40 @@
   background: #e6f7ff;
 }
 
+.employee-panel {
+  color: #000; /* ✅ Ensures all text inside is black */
+}
+
+.product-list th,
 .product-list td {
+  color: #000; /* ✅ Makes table text black */
+}
+
+.product-list th {
+  background: #f8f9fa; /* Light gray background for visibility */
+  font-weight: bold;
   font-size: 14px;
+}
+
+.product-list tr:hover {
+  background: #e6f7ff; /* Light blue hover effect */
+}
+
+input,
+select,
+button {
+  color: #000; /* ✅ Ensures input and button text is black */
+}
+
+button {
+  background: #007bff;
+  color: white; /* Button text stays white */
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0056b3;
 }

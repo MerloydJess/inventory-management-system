@@ -1,0 +1,43 @@
+/* ✅ Force black text for everything inside employee-receipts */
+.employee-receipts, 
+.employee-receipts * {
+  color: #000 !important;  /* 🔥 Forces black text */
+}
+
+/* ✅ Fix headings */
+.employee-receipts h2 {
+  color: #222 !important;
+}
+
+/* ✅ Fix input, select, and button text */
+.employee-receipts input,
+.employee-receipts select,
+.employee-receipts button {
+  color: #000 !important;
+  background: #fff;
+  border: 1px solid #ccc;
+}
+
+/* ✅ Fix table text */
+.receipt-table th,
+.receipt-table td {
+  color: #000 !important;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+/* ✅ Improve table headers */
+.receipt-table th {
+  background: #f4f4f4;
+  font-weight: bold;
+}
+
+/* ✅ Ensure text inside button is readable */
+.employee-receipts button {
+  background: #007bff;
+  color: white !important;
+}
+
+.employee-receipts button:hover {
+  background: #0056b3;
+}

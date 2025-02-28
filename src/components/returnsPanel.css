@@ -1,0 +1,157 @@
+/* 🟢 Modern Panel Design */
+.returns-panel {
+    width: 90%;
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 25px;
+    background: #ffffff;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+.returns-panel:hover {
+    box-shadow: 0px 6px 14px rgba(0, 0, 0, 0.2);
+}
+
+/* 🟢 Improve Headings */
+.returns-panel h2 {
+    text-align: center;
+    color: #222;
+    font-size: 20px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+/* ✅ Fix "Received By" & "Returned By" Headers */
+.received-by-container h3,
+.returned-by-container h3 {
+    font-size: 18px; /* ✅ Reduced Size */
+    font-weight: 600; /* ✅ Make it Bold but Not Too Big */
+    color: #222 !important; /* ✅ Ensure it's Dark & Visible */
+    padding: 8px 0;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 10px;
+}
+
+/* 🟢 Improve Labels */
+.returns-panel label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 10px;
+    color: #333;
+}
+
+/* ✅ Fix Input Fields to Ensure Visibility */
+.returns-panel input,
+.returns-panel select {
+    width: 100%;
+    padding: 10px;
+    margin: 6px 0;
+    border: 1px solid #aaa; /* ✅ Darker Border for Visibility */
+    border-radius: 6px;
+    font-size: 14px; /* ✅ Smaller & Readable */
+    color: #333 !important; /* ✅ Ensure Text is Dark */
+    background: #fff; /* ✅ White Background */
+    transition: border 0.3s, box-shadow 0.3s;
+}
+
+/* 🟢 Improve Focus Effect */
+.returns-panel input:focus,
+.returns-panel select:focus {
+    border-color: #007bff;
+    box-shadow: 0px 0px 6px rgba(0, 123, 255, 0.5);
+    background: #ffffff;
+    outline: none;
+}
+
+/* 🟢 Improve Buttons */
+.returns-panel button {
+    background-color: #007bff;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px; /* ✅ Reduced Button Font Size */
+    cursor: pointer;
+    transition: background 0.3s ease-in-out, transform 0.1s;
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+.returns-panel button:hover {
+    background-color: #0056b3;
+    transform: scale(1.02);
+}
+
+/* 🟢 Improve Back Button */
+.back-btn {
+    background: #dc3545;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.1s;
+    width: 100%;
+}
+
+.back-btn:hover {
+    background: #c82333;
+    transform: scale(1.02);
+}
+
+/* 🟢 Improve Table Styling */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: #fff;
+}
+
+th, td {
+    padding: 12px;
+    text-align: center;
+    border: 1px solid #ddd;
+    color: #222 !important; /* ✅ Ensures Text is Visible */
+}
+
+th {
+    background: #f8f9fa;
+    font-weight: bold;
+    font-size: 14px; /* ✅ Reduced Header Font */
+}
+
+/* ✅ Fix Table Headers */
+table th {
+    color: #222 !important;
+}
+
+tr:nth-child(even) {
+    background: #f2f2f2;
+}
+
+tr:hover {
+    background: #e6f7ff;
+}
+
+/* 🟢 Responsive Design */
+@media (max-width: 768px) {
+    .returns-panel {
+        width: 95%;
+        padding: 20px;
+    }
+
+    th, td {
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    .returns-panel button,
+    .back-btn {
+        font-size: 14px;
+        padding: 10px;
+    }
+}

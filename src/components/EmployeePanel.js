@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './EmployeePanel.css';
+import EmployeeReceipts from "./EmployeeReceipts"; // ✅ Correct import
+
+
 
 const EmployeePanel = ({ userName }) => {
+  const [view, setView] = useState("articles");
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('article');  // Sort by article
@@ -51,59 +55,68 @@ const EmployeePanel = ({ userName }) => {
       return 0;
     });
 
-  return (
-    <div className="employee-panel">
-      <h2>My Assigned Products</h2>
-      <input 
-        type="text" 
-        placeholder="Search by Article, Property Number, or Actual User" 
-        value={searchTerm} 
-        onChange={handleSearchChange} 
-      />
-
-      <div className="sorting">
-        <label>Sort by: </label>
-        <select value={sortOption} onChange={handleSortChange}>
-          <option value="article">Article (A-Z)</option>
-          <option value="unit_value">Unit Value (Low to High)</option>
-          <option value="date_acquired">Date Acquired (Newest to Oldest)</option>
-        </select>
+    return (
+      <div className="employee-panel">
+        <button onClick={() => setView(view === "articles" ? "receipts" : "articles")}>
+          {view === "articles" ? "View Receipts" : "View Articles"}
+        </button>
+    
+        {view === "articles" ? (
+          <>
+            <h2>My Assigned Article</h2>
+            <input 
+              type="text" 
+              placeholder="Search by Article, Property Number, or Actual User" 
+              value={searchTerm} 
+              onChange={handleSearchChange} 
+            />
+    
+            <div className="sorting">
+              <label>Sort by: </label>
+              <select value={sortOption} onChange={handleSortChange}>
+                <option value="article">Article (A-Z)</option>
+                <option value="unit_value">Unit Value (Low to High)</option>
+                <option value="date_acquired">Date Acquired (Newest to Oldest)</option>
+              </select>
+            </div>
+    
+            <table className="product-list">
+              <thead>
+                <tr>
+                  <th>Article</th>
+                  <th>Description</th>
+                  <th>Property Number</th>
+                  <th>Unit</th>
+                  <th>Unit Value</th>
+                  <th>Balance Per Card</th>
+                  <th>On Hand Per Count</th>
+                  <th>Total Amount</th>
+                  <th>Actual User</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map(product => (
+                  <tr key={product.id}>
+                    <td>{product.article}</td>
+                    <td>{product.description}</td>
+                    <td>{product.property_number}</td>
+                    <td>{product.unit}</td>
+                    <td>₱{product.unit_value}</td>
+                    <td>{product.balance_per_card}</td>
+                    <td>{product.on_hand_per_count}</td>
+                    <td>₱{product.total_amount}</td>
+                    <td>{product.actual_user}</td>
+                    <td>{product.remarks}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        ) : (
+          <EmployeeReceipts userName={userName} /> // ✅ Show Receipts Here
+        )}
       </div>
-
-      <table className="product-list">
-        <thead>
-          <tr>
-            <th>Article</th>
-            <th>Description</th>
-            <th>Property Number</th>
-            <th>Unit</th>
-            <th>Unit Value</th>
-            <th>Balance Per Card</th>
-            <th>On Hand Per Count</th>
-            <th>Total Amount</th>
-            <th>Actual User</th>
-            <th>Remarks</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredProducts.map(product => (
-            <tr key={product.id}>
-              <td>{product.article}</td>
-              <td>{product.description}</td>
-              <td>{product.property_number}</td>
-              <td>{product.unit}</td>
-              <td>₱{product.unit_value}</td>
-              <td>{product.balance_per_card}</td>
-              <td>{product.on_hand_per_count}</td>
-              <td>₱{product.total_amount}</td>
-              <td>{product.actual_user}</td>
-              <td>{product.remarks}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
+    );
+}
 export default EmployeePanel;
