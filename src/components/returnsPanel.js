@@ -22,17 +22,20 @@ const ReturnsPanel = () => {
     secondReceivedBy: { name: "", position: "", receiveDate: "" },
   });
 
+  // ✅ Fetch users from backend
   useEffect(() => {
     fetch("http://localhost:5000/get-users")
       .then((res) => res.json())
       .then((data) => setUsers(Array.isArray(data) ? data : []))
-      .catch((err) => console.error("Error fetching users:", err));
+      .catch((err) => console.error("❌ Error fetching users:", err));
   }, []);
 
+  // ✅ Handle simple form input changes
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // ✅ Handle nested form inputs (returnedBy, receivedBy, etc.)
   const handleNestedChange = (e, category) => {
     setForm((prev) => ({
       ...prev,
@@ -40,8 +43,24 @@ const ReturnsPanel = () => {
     }));
   };
 
+  // ✅ Submit the form data to backend
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ✅ Check for missing fields
+    if (
+      !form.rrspNo || !form.date || !form.description || !form.quantity || 
+      !form.icsNo || !form.dateAcquired || !form.amount || !form.endUser ||
+      !form.returnedBy.name || !form.returnedBy.position || !form.returnedBy.returnDate ||
+      !form.receivedBy.name || !form.receivedBy.position || !form.receivedBy.receiveDate
+    ) {
+      alert("❌ Missing required fields. Please fill out all fields.");
+      console.error("❌ Missing Fields:", form);
+      return;
+    }
+
+    console.log("🔍 Form Data Before Sending:", JSON.stringify(form)); // ✅ Debug log
+
     try {
       const response = await fetch("http://localhost:5000/add-receipt", {
         method: "POST",
@@ -49,9 +68,12 @@ const ReturnsPanel = () => {
         body: JSON.stringify(form),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
         alert("✅ Receipt added successfully!");
-        setReturns([...returns, form]);
+        setReturns([...returns, form]); // ✅ Update state
+        // ✅ Reset form
         setForm({
           rrspNo: "",
           date: "",
@@ -67,13 +89,16 @@ const ReturnsPanel = () => {
           secondReceivedBy: { name: "", position: "", receiveDate: "" },
         });
       } else {
-        throw new Error("Failed to add receipt");
+        console.error("❌ Server Error:", data);
+        alert(`❌ Error: ${data.error} \nDetails: ${JSON.stringify(data.details)}`);
       }
     } catch (err) {
-      console.error("❌ Error adding receipt:", err);
-      alert("❌ Error adding receipt");
+      console.error("❌ Network Error:", err);
+      alert("❌ Network error. Unable to reach the server.");
     }
   };
+  
+  
 
   return (
     <div className="returns-panel">

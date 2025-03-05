@@ -162,20 +162,22 @@ server.get("/get-users", (req, res) => {
 });
 
 server.post("/add-receipt", (req, res) => {
+  console.log("🔍 Incoming Data:", req.body); // ✅ Debugging
+
   const {
     rrspNo, date, description, quantity, icsNo, dateAcquired, amount, endUser, remarks,
-    returnedBy, returnedByPosition, returnedByDate,
-    receivedBy, receivedByPosition, receivedByDate,
-    secondReceivedBy = null, secondReceivedByPosition = null, secondReceivedByDate = null
+    returnedBy, receivedBy, secondReceivedBy
   } = req.body;
 
-  // ✅ Check required fields to prevent database errors
-  if (!rrspNo || !date || !description || !quantity || !icsNo || !dateAcquired || !amount || !endUser ||
-      !returnedBy || !returnedByPosition || !returnedByDate || !receivedBy || !receivedByPosition || !receivedByDate) {
-    return res.status(400).json({ error: "Missing required fields" });
+  if (
+    !rrspNo || !date || !description || !quantity || !icsNo || !dateAcquired || !amount || !endUser ||
+    !returnedBy.name || !returnedBy.position || !returnedBy.returnDate ||
+    !receivedBy.name || !receivedBy.position || !receivedBy.receiveDate
+  ) {
+    console.error("❌ Missing Fields:", req.body);
+    return res.status(400).json({ error: "Missing required fields", details: req.body });
   }
 
-  // ✅ Corrected SQL Query (19 columns, 18 values)
   const sql = `INSERT INTO returns (
       rrsp_no, date, description, quantity, ics_no, date_acquired, amount, end_user, remarks, 
       returned_by, returned_by_position, returned_by_date, 
@@ -185,30 +187,95 @@ server.post("/add-receipt", (req, res) => {
 
   const values = [
     rrspNo, date, description, quantity, icsNo, dateAcquired, amount, endUser, remarks || null,
-    returnedBy, returnedByPosition, returnedByDate,
-    receivedBy, receivedByPosition, receivedByDate,
-    secondReceivedBy || null, secondReceivedByPosition || null, secondReceivedByDate || null
+    returnedBy.name, returnedBy.position, returnedBy.returnDate,
+    receivedBy.name, receivedBy.position, receivedBy.receiveDate,
+    secondReceivedBy?.name || null, secondReceivedBy?.position || null, secondReceivedBy?.receiveDate || null
   ];
 
   db.query(sql, values, (err, result) => {
     if (err) {
-      console.error("❌ Error adding receipt:", err.sqlMessage || err);
+      console.error("❌ SQL Error:", err.sqlMessage || err);
       return res.status(500).json({ error: "Database error", details: err.sqlMessage });
     }
+    console.log("✅ Receipt added successfully!", result);
     res.status(200).json({ message: "✅ Receipt added successfully", result });
   });
 });
 
 
+server.post("/add-product", (req, res) => {
+  console.log("🔍 Received Product Data:", req.body); // ✅ Check what data is coming
+
+  const { article, description, date_acquired, property_number, unit, unit_value, 
+          balance_per_card, on_hand_per_count, total_amount, actual_user, remarks } = req.body;
+
+  // ✅ Check if required fields are missing
+  if (!article || !unit || !unit_value || !actual_user) { 
+    console.error("❌ Missing required fields:", req.body);
+    return res.status(400).json({ error: "❌ Missing required fields!", details: req.body });
+  }
+
+  const sql = `INSERT INTO products (article, description, date_acquired, property_number, unit, unit_value, 
+                                      balance_per_card, on_hand_per_count, total_amount, actual_user, remarks) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+  const values = [
+    article, description, date_acquired || null, property_number, unit, unit_value, 
+    balance_per_card, on_hand_per_count, total_amount, actual_user, remarks || null
+  ];
+
+  db.query(sql, values, (err, result) => {
+    if (err) {
+      console.error("❌ Database Error:", err.sqlMessage || err);
+      return res.status(500).json({ error: "Database error", details: err.sqlMessage });
+    }
+
+    console.log("✅ Product Added to Database:", result);
+    res.status(200).json({ message: "✅ Product added successfully!", productId: result.insertId });
+  });
+});
+
+server.get("/get-products/:user", (req, res) => {
+  const actualUser = decodeURIComponent(req.params.user);
+  console.log("🔍 Fetching products for:", actualUser); // ✅ Debugging
+
+  const sql = `SELECT * FROM products WHERE actual_user = ? ORDER BY date_acquired DESC`;
+  
+  db.query(sql, [actualUser], (err, results) => {
+    if (err) {
+      console.error("❌ Database Error:", err);
+      return res.status(500).json({ error: "Database error", details: err.sqlMessage });
+    }
+
+    console.log("✅ Products Fetched for:", actualUser, results); // ✅ Debugging
+    res.status(200).json(results);
+  });
+});
+
 
 
 // 🚀 Get Receipts for Employee
 server.get("/get-receipts/:endUser", (req, res) => {
-  db.query("SELECT * FROM returns WHERE end_user = ?", [decodeURIComponent(req.params.endUser)], (err, results) => {
-    if (err) return res.status(500).send("Database error");
+  const endUser = decodeURIComponent(req.params.endUser);
+  
+  // ✅ Ensure the query fetches `returned_by`
+  const sql = `SELECT rrsp_no, date, description, quantity, ics_no, date_acquired, amount, end_user, remarks,
+                      returned_by, returned_by_position, returned_by_date,
+                      received_by, received_by_position, received_by_date,
+                      second_received_by, second_received_by_position, second_received_by_date 
+               FROM returns WHERE end_user = ?`;
+
+  db.query(sql, [endUser], (err, results) => {
+    if (err) {
+      console.error("❌ Error fetching receipts:", err);
+      return res.status(500).json({ error: "Database error", details: err.sqlMessage });
+    }
+
+    console.log("✅ Fetched Receipts:", results); // ✅ Debugging log
     res.status(200).json(results);
   });
 });
+
 
 // 🚀 Start Express Server
 server.listen(5000, () => {

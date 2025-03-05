@@ -1,9 +1,14 @@
 /* General Styling */
 body {
   font-family: 'Arial', sans-serif;
-  background: #f4f6f9;
+  background: linear-gradient(to right, #007bff, #00c6ff);
   margin: 0;
   padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  overflow-y: auto;
 }
 
 /* Header */
@@ -14,24 +19,30 @@ body {
   color: white;
   font-size: 24px;
   font-weight: bold;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
 /* Admin Panel */
 .admin-panel {
   max-width: 600px;
-  margin: 40px auto;
+  margin: 80px auto 40px; /* Adjusted to avoid overlap with header */
   padding: 30px;
   background: white;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3);
   border-radius: 10px;
   text-align: center;
+  animation: fadeIn 0.5s ease-in-out;
 }
 
 /* Titles */
 .admin-panel h2 {
   color: #333;
-  font-size: 22px;
+  font-size: 24px;
   margin-bottom: 20px;
+  font-weight: bold;
 }
 
 /* Input Fields */
@@ -45,6 +56,7 @@ body {
   border-radius: 5px;
   box-sizing: border-box;
   font-size: 16px;
+  transition: 0.3s;
 }
 
 /* Focus Effect */
@@ -53,7 +65,7 @@ body {
 .admin-panel textarea:focus {
   border-color: #007bff;
   outline: none;
-  box-shadow: 0 0 8px rgba(0, 123, 255, 0.2);
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
 }
 
 /* Buttons */
@@ -64,7 +76,8 @@ body {
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: 0.3s ease;
+  font-weight: bold;
 }
 
 /* Primary Blue Button */
@@ -75,6 +88,7 @@ body {
 
 .primary-btn:hover {
   background: #0056b3;
+  transform: scale(1.05);
 }
 
 /* Success Green Button */
@@ -85,6 +99,7 @@ body {
 
 .success-btn:hover {
   background: #218838;
+  transform: scale(1.05);
 }
 
 /* Logout Button (Red, Centered) */
@@ -95,25 +110,39 @@ body {
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: 0.3s;
   display: block;
   margin: 20px auto;
   max-width: 150px;
   text-align: center;
 }
 
-
-
+.logout-btn:hover {
+  background: #c82333;
+  transform: scale(1.05);
+}
 
 /* Responsive Design */
 @media (max-width: 768px) {
   .admin-panel {
-      max-width: 90%;
-      padding: 20px;
+    max-width: 90%;
+    padding: 20px;
   }
 
   .header {
-      font-size: 20px;
-      padding: 15px;
+    font-size: 20px;
+    padding: 15px;
+  }
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

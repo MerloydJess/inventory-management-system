@@ -1,0 +1,108 @@
+/* ✅ Login.css - Modern Login Page Design */
+
+/* 📌 Full page background */
+.login {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    background: linear-gradient(to right, #007bff, #00c6ff);
+    font-family: "Arial", sans-serif;
+  }
+  
+  /* 📌 Centered Login Card */
+  .login-container {
+    background: white;
+    padding: 30px;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  /* 📌 Title */
+  .login-container h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  /* 📌 Input Fields */
+  .login-container input {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  /* ✅ Input Focus Effect */
+  .login-container input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0px 0px 8px rgba(0, 123, 255, 0.5);
+  }
+  
+  /* 📌 Login Button */
+  .login-container button {
+    width: 100%;
+    padding: 12px;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    font-size: 18px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  /* ✅ Button Hover Effect */
+  .login-container button:hover {
+    background-color: #0056b3;
+  }
+  
+  /* 📌 Error Message */
+  .error {
+    color: red;
+    margin-top: 10px;
+    font-size: 14px;
+  }
+  /* ✅ Ensure background extends across entire viewport */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Prevent scrolling issues */
+  }
+  
+  /* 📌 Fade-In Animation */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* ✅ Mobile Responsive */
+  @media (max-width: 500px) {
+    .login-container {
+      width: 90%;
+      padding: 20px;
+    }
+  
+    .login-container h2 {
+      font-size: 20px;
+    }
+  }
+  

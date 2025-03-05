@@ -15,11 +15,12 @@ const EmployeePanel = ({ userName }) => {
   const fetchProducts = () => {
     axios.get(`http://localhost:5000/get-products/${userName}`)
       .then(res => {
-        console.log('Fetched Products:', res.data);
+        console.log('🟢 Fetched Products for:', userName, res.data); // ✅ Debugging
         setProducts(res.data);
       })
-      .catch(err => console.error(err));
+      .catch(err => console.error("❌ Error fetching products:", err.response?.data || err.message));
   };
+  
 
   useEffect(() => {
     if (userName) {

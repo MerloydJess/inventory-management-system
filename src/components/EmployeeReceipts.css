@@ -1,43 +1,93 @@
-/* ✅ Force black text for everything inside employee-receipts */
-.employee-receipts, 
-.employee-receipts * {
-  color: #000 !important;  /* 🔥 Forces black text */
+/* ✅ EmployeeReceipts.css */
+
+/* ✅ Make table container responsive */
+.employee-receipts {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 10px;
+  display: block;
 }
 
-/* ✅ Fix headings */
-.employee-receipts h2 {
-  color: #222 !important;
+/* ✅ Style the table */
+.employee-receipts table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  min-width: 1200px; /* ✅ Ensures table doesn’t shrink too much */
 }
 
-/* ✅ Fix input, select, and button text */
-.employee-receipts input,
-.employee-receipts select,
-.employee-receipts button {
-  color: #000 !important;
-  background: #fff;
-  border: 1px solid #ccc;
+/* ✅ Table headers */
+.employee-receipts th {
+  background-color: #007bff;
+  color: white;
+  text-align: center;
+  padding: 12px;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
-/* ✅ Fix table text */
-.receipt-table th,
-.receipt-table td {
-  color: #000 !important;
-  background: #fff;
+/* ✅ Table cells */
+.employee-receipts td {
+  padding: 10px;
   border: 1px solid #ddd;
+  text-align: center;
+  font-size: 14px;
+  word-wrap: break-word;
+  white-space: normal;
 }
 
-/* ✅ Improve table headers */
-.receipt-table th {
-  background: #f4f4f4;
-  font-weight: bold;
+/* ✅ Alternate row colors for better readability */
+.employee-receipts tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
 }
 
-/* ✅ Ensure text inside button is readable */
-.employee-receipts button {
-  background: #007bff;
-  color: white !important;
+/* ✅ Hover effect */
+.employee-receipts tbody tr:hover {
+  background-color: #e6f7ff;
 }
 
-.employee-receipts button:hover {
-  background: #0056b3;
+/* ✅ Set specific column widths */
+.employee-receipts th:nth-child(1), 
+.employee-receipts td:nth-child(1) { width: 8%; }  /* RRSP No. */
+.employee-receipts th:nth-child(2), 
+.employee-receipts td:nth-child(2) { width: 10%; } /* Date */
+.employee-receipts th:nth-child(3), 
+.employee-receipts td:nth-child(3) { width: 15%; } /* Description */
+.employee-receipts th:nth-child(4), 
+.employee-receipts td:nth-child(4) { width: 7%; }  /* Quantity */
+.employee-receipts th:nth-child(5), 
+.employee-receipts td:nth-child(5) { width: 10%; } /* ICS No. */
+.employee-receipts th:nth-child(6), 
+.employee-receipts td:nth-child(6) { width: 10%; } /* Date Acquired */
+.employee-receipts th:nth-child(7), 
+.employee-receipts td:nth-child(7) { width: 10%; } /* Amount */
+.employee-receipts th:nth-child(8), 
+.employee-receipts td:nth-child(8) { width: 10%; } /* End User */
+.employee-receipts th:nth-child(9), 
+.employee-receipts td:nth-child(9) { width: 8%; }  /* Remarks */
+.employee-receipts th:nth-child(10), 
+.employee-receipts td:nth-child(10) { width: 15%; } /* Sender (Returned By) */
+.employee-receipts th:nth-child(11), 
+.employee-receipts td:nth-child(11) { width: 15%; } /* Receiver */
+.employee-receipts th:nth-child(12), 
+.employee-receipts td:nth-child(12) { width: 15%; } /* Second Receiver */
+
+/* ✅ Scrollable table for mobile screens */
+@media screen and (max-width: 768px) {
+  .employee-receipts {
+    overflow-x: auto;
+    padding: 15px;
+  }
+
+  .employee-receipts table {
+    font-size: 12px;
+    min-width: 1000px; /* ✅ Prevents table from shrinking too much */
+  }
+
+  .employee-receipts th, .employee-receipts td {
+    padding: 8px;
+  }
 }

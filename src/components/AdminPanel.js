@@ -58,8 +58,22 @@ const AdminPanel = () => {
   };
 
   const handleChange = (e) => {
-    setProduct({ ...product, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let updatedProduct = { ...product, [name]: value };
+  
+    // ✅ Auto-calculate total_amount when unit_value or balance_per_card changes
+    if (name === "unit_value" || name === "balance_per_card") {
+      const unitValue = parseFloat(updatedProduct.unit_value) || 0;
+      const balancePerCard = parseFloat(updatedProduct.balance_per_card) || 0;
+      const totalAmount = unitValue * balancePerCard;
+  
+      updatedProduct.total_amount = totalAmount.toFixed(2); // ✅ Keep as a number for database
+    }
+  
+    setProduct(updatedProduct);
   };
+  
+  
 
   const handleUserChange = (e) => {
     setNewUser({ ...newUser, [e.target.name]: e.target.value });
@@ -67,30 +81,45 @@ const AdminPanel = () => {
 
   const handleProductSubmit = (e) => {
     e.preventDefault();
-    setProduct({
-      article: "",
-      description: "",
-      date_acquired: "",
-      property_number: "",
-      unit: "",
-      unit_value: "",
-      balance_per_card: "",
-      on_hand_per_count: "",
-      total_amount: "",
-      actual_user: "",
-      remarks: "",
-    });
-
-    const productData = { ...product, date_acquired: product.date_acquired || null };
-
+  
+    // ✅ Remove currency formatting for database
+    const cleanTotalAmount = parseFloat(product.total_amount.replace(/[₱,]/g, "")) || 0;
+  
+    const productData = { 
+      ...product, 
+      date_acquired: product.date_acquired || null,
+      total_amount: cleanTotalAmount // ✅ Ensure it's a valid number
+    };
+  
     axios
       .post("http://localhost:5000/add-product", productData)
       .then((res) => {
+        console.log("✅ Product Added Response:", res.data);
         alert("✅ Article Added!");
         setProducts([...products, res.data]);
+  
+        // ✅ Reset form after successful submission
+        setProduct({
+          article: "",
+          description: "",
+          date_acquired: "",
+          property_number: "",
+          unit: "",
+          unit_value: "",
+          balance_per_card: "",
+          on_hand_per_count: "",
+          total_amount: "",
+          actual_user: "",
+          remarks: "",
+        });
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error("❌ Error Adding Product:", err.response?.data || err.message);
+        alert("❌ Error adding product! Check console.");
+      });
   };
+  
+  
 
   const handleAddUser = (e) => {
     e.preventDefault();
@@ -108,10 +137,7 @@ const AdminPanel = () => {
 
   return (
     <div className="admin-panel">
-      {/* ✅ Keep only this logout button */}
-      <button className="logout-btn" onClick={() => window.location.reload()}>
-        Logout
-      </button>
+      
 
       <h2>Add New Article</h2>
 
@@ -177,12 +203,16 @@ const AdminPanel = () => {
           onChange={handleChange}
         />
         <input
-          type="number"
-          name="total_amount"
-          placeholder="Total Amount"
-          value={product.total_amount}
-          onChange={handleChange}
-        />
+  type="text"
+  name="total_amount"
+  placeholder="Total Amount"
+  value={`₱${Number(product.total_amount).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`} // ✅ Displays formatted ₱ value
+  readOnly
+/>
+
 
         <div className="user-select">
           <select name="actual_user" value={product.actual_user} onChange={handleChange} required>

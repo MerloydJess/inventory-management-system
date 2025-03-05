@@ -6,6 +6,7 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   border-radius: 10px;
   text-align: center;
+  color: #000; /* Ensures all text inside is black */
 }
 
 .employee-panel h2 {
@@ -14,17 +15,20 @@
   font-size: 22px;
 }
 
-.employee-panel input, .employee-panel select {
+.employee-panel input,
+.employee-panel select {
   width: 95%;
   padding: 10px;
   margin: 10px 0;
   border: 1px solid #ccc;
   border-radius: 5px;
-  transition: border-color 0.3s;
+  transition: border-color 0.3s ease-in-out;
 }
 
-.employee-panel input:focus, .employee-panel select:focus {
+.employee-panel input:focus,
+.employee-panel select:focus {
   border-color: #007bff;
+  outline: none;
 }
 
 .sorting {
@@ -47,14 +51,16 @@
   overflow: hidden;
 }
 
-.product-list th, .product-list td {
+.product-list th,
+.product-list td {
   padding: 10px;
   text-align: center;
   border-bottom: 1px solid #ddd;
+  color: #000; /* Ensures table text is black */
 }
 
 .product-list th {
-  background: #f8f9fa;
+  background: #f8f9fa; /* Light gray background for visibility */
   font-weight: bold;
   font-size: 14px;
 }
@@ -64,43 +70,31 @@
 }
 
 .product-list tr:hover {
-  background: #e6f7ff;
-}
-
-.employee-panel {
-  color: #000; /* ✅ Ensures all text inside is black */
-}
-
-.product-list th,
-.product-list td {
-  color: #000; /* ✅ Makes table text black */
-}
-
-.product-list th {
-  background: #f8f9fa; /* Light gray background for visibility */
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.product-list tr:hover {
   background: #e6f7ff; /* Light blue hover effect */
 }
 
 input,
 select,
 button {
-  color: #000; /* ✅ Ensures input and button text is black */
+  color: #000; /* Ensures input and button text is black */
 }
 
 button {
   background: #007bff;
-  color: white; /* Button text stays white */
-  padding: 10px;
+  color: white;
+  padding: 10px 15px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  transition: background 0.3s ease-in-out;
 }
 
 button:hover {
   background: #0056b3;
+}
+
+/* ✅ Added disabled button styles */
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
