@@ -1,0 +1,94 @@
+/* 🌟 Supervisor Panel Styling */
+.supervisor-panel {
+    width: 90%; /* ✅ Adjusted width */
+    max-width: 10000px; /* ✅ Ensures a balanced layout */
+    margin: 10px auto;
+    padding: 15px;
+    background: #ffffff;
+    border-radius: 12px;
+    display: block;
+    box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease-in-out;
+    text-align: center;
+  }
+  
+  /* 🔹 Navigation Buttons */
+  .supervisor-panel .nav-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  
+  .supervisor-panel .nav-buttons button {
+    background: #007bff;
+    color: white;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px; /* ✅ Reduced font size */
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .supervisor-panel .nav-buttons button:hover {
+    background: #0056b3;
+    transform: scale(1.03);
+  }
+  
+  /* 🔹 Table Styling */
+  .supervisor-panel table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px; /* ✅ Reduced font size for better fit */
+    background: #fff;
+  }
+  
+  /* 🔹 Table Headers */
+  .supervisor-panel th {
+    background: #007bff;
+    color: white;
+    padding: 10px; /* ✅ Adjusted padding */
+    border-bottom: 2px solid #0056b3;
+  }
+  
+  /* 🔹 Table Cells */
+  .supervisor-panel td {
+    padding: 8px; /* ✅ Reduced padding to save space */
+    border: 1px solid #ddd;
+    text-align: center;
+    white-space: normal;
+  }
+  
+  /* 🔹 Alternate Row Colors */
+  .supervisor-panel tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+  }
+  
+  /* 🔹 Hover Effect */
+  .supervisor-panel tbody tr:hover {
+    background-color: #e6f7ff;
+  }
+  
+  /* ✅ Responsive Design for Small Screens */
+  @media screen and (max-width: 1024px) {
+    .supervisor-panel {
+      width: 95%;
+      padding: 10px;
+    }
+  
+    .supervisor-panel table {
+      font-size: 12px; /* ✅ Reduce font size for small screens */
+    }
+  
+    .supervisor-panel th,
+    .supervisor-panel td {
+      padding: 6px;
+    }
+  
+    .supervisor-panel .nav-buttons {
+      flex-direction: column;
+      gap: 8px;
+    }
+  }
+  

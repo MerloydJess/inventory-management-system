@@ -1,0 +1,76 @@
+/* 🌟 Modern Login Styling */
+.login {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #1E3C72, #2A5298);
+}
+
+/* 🔹 Login Container */
+.login-container {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  width: 350px;
+  text-align: center;
+  color: white;
+}
+
+/* 🔹 Login Title */
+.login-container h2 {
+  font-size: 26px;
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
+/* 🔹 Input Fields */
+.login-container input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 16px;
+  transition: 0.3s;
+}
+
+.login-container input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.login-container input:focus {
+  border: 1px solid #fff;
+  outline: none;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 🔹 Login Button */
+.login-container button {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(90deg, #FF416C, #FF4B2B);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-container button:hover {
+  transform: scale(1.05);
+  background: linear-gradient(90deg, #FF4B2B, #FF416C);
+}
+
+/* 🔹 Error Message */
+.error {
+  color: #ff4b2b;
+  font-size: 14px;
+  margin-top: 10px;
+}

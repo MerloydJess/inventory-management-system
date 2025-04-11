@@ -1,0 +1,74 @@
+/* 🌟 Main Container */
+.employee-receipts {
+  width: 90%;
+  max-width: 1200px; /* ✅ Ensures content fits well */
+  margin: 0 auto;
+  padding: 30px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
+}
+
+/* 📄 Table Wrapper - Ensures No Overflow */
+.employee-receipts .table-container {
+  overflow-x: auto; /* ✅ Prevents horizontal scrolling */
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+/* 📄 Table Styling */
+.employee-receipts table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  table-layout: fixed; /* ✅ Keeps columns even */
+}
+
+/* 📌 Table Header */
+.employee-receipts th {
+  background-color: #007bff;
+  color: white;
+  text-align: center;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: bold;
+  border-bottom: 2px solid #0056b3;
+  word-wrap: break-word;
+}
+
+/* 📌 Table Cells */
+.employee-receipts td {
+  padding: 12px;
+  border: 1px solid #ddd;
+  text-align: center;
+  font-size: 14px;
+  word-wrap: break-word;
+  white-space: normal;
+}
+
+/* ✅ Adjust Column Widths */
+.employee-receipts th,
+.employee-receipts td {
+  min-width: 80px;
+}
+
+/* ✅ Responsive Adjustments */
+@media screen and (max-width: 1024px) {
+  .employee-receipts {
+    width: 95%;
+  }
+
+  .employee-receipts table {
+    table-layout: auto;
+    display: block;
+    overflow-x: auto;
+  }
+
+  .employee-receipts th,
+  .employee-receipts td {
+    padding: 10px;
+    font-size: 14px;
+  }
+}

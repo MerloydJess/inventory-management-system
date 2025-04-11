@@ -1,0 +1,111 @@
+/* ===== 🌟 Fix Scrolling & Layout Issues ===== */
+
+body {
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(to right, #007bff, #00c6ff);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  overflow-y: auto;  /* Enables scrolling */
+  display: block;  /* Prevents flexbox issues */
+  padding-top: 80px; /* Avoids content being hidden behind header */
+}
+
+/* ===== 🔹 Fixed Header for Admin Panel ===== */
+.header {
+  background: #222;
+  padding: 20px;
+  text-align: center;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+}
+
+/* ===== 🔹 Admin Panel Container ===== */
+.admin-panel {
+  max-width: 750px;
+  width: 100%;
+  margin: auto;  /* Center content */
+  padding: 30px;
+  background: white;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  text-align: center;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* ===== 🔹 Ensure Inputs Expand Correctly ===== */
+.admin-panel input,
+.admin-panel select,
+.admin-panel textarea {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
+  font-size: 16px;
+  transition: 0.3s;
+}
+
+/* ===== 🔹 Fix Buttons for Consistent Sizing ===== */
+.admin-panel button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.3s ease;
+  font-weight: bold;
+}
+
+/* ===== 🔹 Fix Logout Button Spacing ===== */
+.logout-btn {
+  background: #dc3545;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.3s;
+  display: block;
+  margin: 20px auto;
+  max-width: 150px;
+  text-align: center;
+}
+
+/* ===== 🔹 Responsive Design Fixes ===== */
+@media (max-width: 768px) {
+  .admin-panel {
+    max-width: 90%;
+    padding: 20px;
+  }
+
+  .header {
+    font-size: 20px;
+    padding: 15px;
+    position: relative; /* Allow header to move with content */
+  }
+
+  body {
+    padding-top: 0; /* Allow natural spacing */
+  }
+}
+
+/* ===== 🔹 Smooth Fade In Animation ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

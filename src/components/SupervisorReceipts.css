@@ -1,0 +1,77 @@
+.supervisor-receipts {
+  width: 90%;
+  max-width: 1400px;
+  margin: 20px auto;
+  padding: 15px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+/* ✅ Title & Search */
+.supervisor-receipts h2 {
+  text-align: center;
+  color: #333;
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+
+.supervisor-receipts input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+/* ✅ Table Adjustments */
+.supervisor-receipts table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 14px;
+}
+
+/* ✅ Table Headers */
+.supervisor-receipts th {
+  background: #007bff;
+  color: white;
+  padding: 12px;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* ✅ Table Cells */
+.supervisor-receipts td {
+  padding: 10px;
+  text-align: center;
+  border: 1px solid #ddd;
+  white-space: nowrap; /* ✅ Prevents text wrapping */
+}
+
+/* ✅ Alternate Row Colors */
+.supervisor-receipts tbody tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.supervisor-receipts tbody tr:hover {
+  background: #e6f7ff;
+}
+
+/* 📱 Responsive */
+@media (max-width: 1024px) {
+  .supervisor-receipts {
+      width: 95%;
+      padding: 10px;
+  }
+  
+  .supervisor-receipts table {
+      font-size: 12px;
+  }
+
+  .supervisor-receipts th, .supervisor-receipts td {
+      padding: 8px;
+  }
+}

@@ -1,0 +1,161 @@
+/* 🌟 Professional Employee Panel */
+.employee-panel {
+  max-width: 1000px;
+  margin: 20px auto;
+  padding: 25px;
+  background: #ffffff;
+  box-shadow: 0px 5px 14px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  text-align: center;
+  color: #222;
+  transition: all 0.3s ease-in-out;
+}
+
+/* 🎯 Heading Styling */
+.employee-panel h2 {
+  margin-bottom: 22px;
+  color: #222;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+/* 🔹 Form Elements */
+.employee-panel input,
+.employee-panel select {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+  color: #333;
+  background: #fff;
+  transition: border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+/* 🎨 Focus Effects */
+.employee-panel input:focus,
+.employee-panel select:focus {
+  border-color: #007bff;
+  box-shadow: 0px 0px 8px rgba(0, 123, 255, 0.4);
+  outline: none;
+}
+
+/* 🛠️ Sorting Dropdown */
+.sorting {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.sorting select {
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  transition: all 0.3s ease-in-out;
+}
+
+.sorting select:focus {
+  border-color: #007bff;
+  box-shadow: 0px 0px 6px rgba(0, 123, 255, 0.3);
+}
+
+/* 📊 Product List Table */
+.product-list {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 🎨 Table Header & Cells */
+.product-list th,
+.product-list td {
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+  font-size: 15px;
+}
+
+/* 🏷️ Table Header Styling */
+.product-list th {
+  background: #f8f9fa;
+  font-weight: bold;
+  font-size: 16px;
+  color: #222;
+}
+
+/* 🔄 Alternate Row Color */
+.product-list tr:nth-child(even) {
+  background: #f2f2f2;
+}
+
+/* 🎨 Table Hover Effect */
+.product-list tr:hover {
+  background: #e6f7ff;
+  transition: all 0.2s ease-in-out;
+}
+
+/* 🔘 Buttons */
+button {
+  background: #007bff;
+  color: white;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+
+/* 🔹 Button Hover & Active Effect */
+button:hover {
+  background: #0056b3;
+  transform: scale(1.03);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* 🚫 Disabled Button */
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* 📱 Responsive Design */
+@media (max-width: 768px) {
+  .employee-panel {
+      width: 95%;
+      padding: 20px;
+  }
+
+  .sorting {
+      flex-direction: column;
+      align-items: center;
+  }
+
+  .sorting select {
+      width: 100%;
+  }
+
+  .product-list th,
+  .product-list td {
+      padding: 10px;
+      font-size: 14px;
+  }
+
+  button {
+      font-size: 14px;
+      padding: 10px;
+  }
+}

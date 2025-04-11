@@ -1,0 +1,104 @@
+/* 🌟 Center the Form */
+.employee-add-article {
+    width: 50%;
+    max-width: 700px;
+    margin: 50px auto;
+    padding: 30px;
+    background: #ffffff;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  /* 🎯 Improve Heading */
+  .employee-add-article h2 {
+    text-align: center;
+    color: #222;
+    font-size: 26px;
+    margin-bottom: 20px;
+    font-weight: bold;
+  }
+  
+  /* 🏷️ Style Labels */
+  .employee-add-article label {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #333;
+  }
+  
+  /* 🔹 Style Input Fields */
+  .employee-add-article input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #aaa;
+    border-radius: 6px;
+    font-size: 15px;
+    color: #333;
+    background: #fff;
+    transition: 0.3s ease-in-out;
+    display: block;
+  }
+  
+  /* 🎨 Focus Effect on Inputs */
+  .employee-add-article input:focus {
+    border-color: #007bff;
+    box-shadow: 0px 0px 6px rgba(0, 123, 255, 0.4);
+    outline: none;
+  }
+  
+  /* 🔵 Add Article Button */
+  .employee-add-article button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    display: block;
+  }
+  
+  /* 🟢 Primary Button (Submit) */
+  .employee-add-article button[type="submit"] {
+    background-color: #007bff;
+    color: white;
+    margin-top: 10px;
+  }
+  
+  .employee-add-article button[type="submit"]:hover {
+    background-color: #0056b3;
+  }
+  
+  /* 🔴 Back Button */
+  .back-btn {
+    background: #dc3545;
+    color: white;
+    margin-top: 15px;
+  }
+  
+  .back-btn:hover {
+    background: #c82333;
+  }
+  
+  /* 📱 Responsive Design for Mobile */
+  @media (max-width: 768px) {
+    .employee-add-article {
+      width: 90%;
+      padding: 20px;
+    }
+  
+    .employee-add-article input {
+      font-size: 14px;
+      padding: 10px;
+    }
+  
+    .employee-add-article button {
+      font-size: 14px;
+      padding: 12px;
+    }
+  }
+  

@@ -1,0 +1,168 @@
+/* 🌟 Professional Returns Panel */
+.returns-panel {
+    width: 100%;
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 30px;
+    background: #ffffff;
+    box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Subtle hover effect */
+.returns-panel:hover {
+    box-shadow: 0px 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+/* 🎯 Headings */
+.returns-panel h2 {
+    text-align: center;
+    color: #222;
+    font-size: 22px;
+    margin-bottom: 18px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+/* 🎯 Section Titles */
+.received-by-container h3,
+.returned-by-container h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #222;
+    padding: 10px 0;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 12px;
+}
+
+/* 🏷️ Labels */
+.returns-panel label {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 12px;
+    color: #333;
+}
+
+/* 🔹 Input & Select Styling */
+.returns-panel input,
+.returns-panel select {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #aaa;
+    border-radius: 6px;
+    font-size: 15px;
+    color: #333;
+    background: #fff;
+    transition: 0.3s ease-in-out;
+}
+
+/* 🔹 Focus Effect */
+.returns-panel input:focus,
+.returns-panel select:focus {
+    border-color: #007bff;
+    box-shadow: 0px 0px 8px rgba(0, 123, 255, 0.5);
+    background: #ffffff;
+    outline: none;
+}
+
+/* 🎨 Buttons */
+.returns-panel button,
+.back-btn {
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    display: block;
+    width: 100%;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* 🔵 Primary Button */
+.returns-panel button {
+    background-color: #007bff;
+    color: white;
+}
+
+.returns-panel button:hover {
+    background-color: #0056b3;
+    transform: scale(1.03);
+}
+
+/* 🔴 Back Button */
+.back-btn {
+    background: #dc3545;
+    color: white;
+}
+
+.back-btn:hover {
+    background: #c82333;
+    transform: scale(1.03);
+}
+
+/* 🚫 Disabled Button */
+button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* 📊 Table Styling */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: #fff;
+}
+
+th, td {
+    padding: 14px;
+    text-align: center;
+    border: 1px solid #ddd;
+    color: #222;
+    font-size: 15px;
+}
+
+th {
+    background: #f8f9fa;
+    font-weight: bold;
+}
+
+/* 🖌️ Table Header Styling */
+table th {
+    color: #222;
+}
+
+/* 🔄 Alternate Row Color */
+tr:nth-child(even) {
+    background: #f2f2f2;
+}
+
+/* 🎨 Table Hover Effect */
+tr:hover {
+    background: #e6f7ff;
+}
+
+/* 📱 Responsive Design */
+@media (max-width: 768px) {
+    .returns-panel {
+        width: 95%;
+        padding: 20px;
+    }
+
+    th, td {
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    .returns-panel button,
+    .back-btn {
+        font-size: 14px;
+        padding: 12px;
+    }
+}

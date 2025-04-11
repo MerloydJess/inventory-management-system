@@ -1,0 +1,164 @@
+/* ===== 🌟 Global Styles - Modern, Clean, and Elegant ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+  overflow: visible !important;
+}
+
+/* ===== 🔹 Stunning Background with Gradient ===== */
+body {
+  background: linear-gradient(135deg, #1E3C72, #2A5298);
+  color: white;
+  min-height: 100vh;
+}
+
+/* ===== 🔹 Container with Centered Content ===== */
+.App {
+  width: 100%;
+  max-width: 1200px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== 🔹 Elegant Header with Glassmorphism Effect ===== */
+.header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  margin: 20px auto;
+  box-shadow: 0 5px 20px rgba(255, 255, 255, 0.2);
+  font-size: 24px;
+  font-weight: bold;
+  width: 90%;
+  color: white;
+  z-index: 1000;
+}
+
+/* ===== 🔹 Logout Button - Professional Style ===== */
+.logout-btn {
+  background: #dc3545;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+  position: absolute;
+  right: 30px;
+  top: 15px;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
+}
+
+/* ===== 🔹 Main Content Area ===== */
+.content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 70px;
+  flex-grow: 1;
+  padding-bottom: 100px;
+}
+
+/* ===== 🔹 Stunning Login Card ===== */
+.login-card {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(15px);
+  width: 350px;
+  text-align: center;
+}
+
+.login-card h2 {
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 16px;
+}
+
+.login-card input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+
+.login-card button {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(90deg, #FF416C, #FF4B2B);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-card button:hover {
+  transform: scale(1.05);
+}
+
+/* Ensure scrolling works */
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow-y: auto;  /* Allows vertical scrolling */
+  scroll-behavior: smooth;
+  display: block;
+}
+
+/* ===== 🔹 Responsive Design - Mobile Friendly ===== */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .logout-btn {
+    margin-top: 10px;
+  }
+
+  .main-content {
+    flex-grow: 1; /* Takes available space */
+    overflow-y: auto;
+    padding-top: 70px; /* Ensures it's not hidden behind the header */
+  }
+  .content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  #root, .app-container {
+    height: 100vh; /* Full height */
+    display: flex;
+    flex-direction: column;
+    overflow: visible !important; /* Enables scrolling inside the container */
+  }
+
+  .login-card {
+    width: 90%;
+  }
+}
