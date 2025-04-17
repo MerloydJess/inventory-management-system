@@ -28,6 +28,7 @@ const AdminPanel = () => {
     name: "",
     role: "employee",
     password: "",
+    confirmPassword: "",
   });
 
   const navigate = useNavigate();
@@ -139,15 +140,25 @@ const AdminPanel = () => {
 
   const handleAddUser = (e) => {
     e.preventDefault();
-    const userData = { ...newUser };
-
+  
+    if (newUser.password !== newUser.confirmPassword) {
+      alert("❌ Passwords do not match!");
+      return;
+    }
+  
+    const userData = {
+      name: newUser.name,
+      password: newUser.password,
+      role: newUser.role,
+    };
+  
     axios
       .post("http://localhost:5000/add-user", userData)
       .then(() => {
         alert("✅ User Added!");
         setShowUserForm(false);
         fetchUsers();
-        setNewUser({ name: "", role: "employee", password: "" });
+        setNewUser({ name: "", role: "employee", password: "", confirmPassword: "" });
       })
       .catch((err) => {
         console.error("❌ Error adding user:", err.response?.data || err.message);
@@ -206,16 +217,38 @@ const AdminPanel = () => {
         <div className="popup-form">
           <h3>Add New User</h3>
           <form onSubmit={handleAddUser}>
-            <input type="text" name="name" placeholder="User Name" value={newUser.name} onChange={handleUserChange} required />
-            <input type="password" name="password" placeholder="Password" value={newUser.password} onChange={handleUserChange} required />
-            <select name="role" value={newUser.role} onChange={handleUserChange} required>
-              <option value="admin">Admin</option>
-              <option value="employee">Employee</option>
-              <option value="supervisor">Supervisor</option>
-            </select>
-            <button type="submit">Save User</button>
-            <button type="button" onClick={() => setShowUserForm(false)}>Cancel</button>
-          </form>
+  <input
+    type="text"
+    name="name"
+    placeholder="User Name"
+    value={newUser.name}
+    onChange={handleUserChange}
+    required
+  />
+  <input
+    type="password"
+    name="password"
+    placeholder="Password"
+    value={newUser.password}
+    onChange={handleUserChange}
+    required
+  />
+  <input
+    type="password"
+    name="confirmPassword"
+    placeholder="Confirm Password"
+    value={newUser.confirmPassword}
+    onChange={handleUserChange}
+    required
+  />
+  <select name="role" value={newUser.role} onChange={handleUserChange} required>
+    <option value="admin">Admin</option>
+    <option value="employee">Employee</option>
+    <option value="supervisor">Supervisor</option>
+  </select>
+  <button type="submit">Save User</button>
+  <button type="button" onClick={() => setShowUserForm(false)}>Cancel</button>
+</form>
         </div>
       )}
 

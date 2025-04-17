@@ -17,9 +17,9 @@
       amount: "",
       endUser: "",
       remarks: "",
-      returnedBy: { name: "", position: "", returnDate: "" },
-      receivedBy: { name: "", position: "", receiveDate: "" },
-      secondReceivedBy: { name: "", position: "", receiveDate: "" },
+      returnedBy: { name: "", position: "", returnDate: "", location: "", },
+      receivedBy: { name: "", position: "", receiveDate: "", location: "", },
+      secondReceivedBy: { name: "", position: "", receiveDate: "", location: "",},
     });
 
     // ✅ Fetch users from backend
@@ -166,6 +166,7 @@
             <input type="text" name="name" placeholder="Name" value={form.returnedBy.name} onChange={(e) => handleNestedChange(e, "returnedBy")} required />
             <input type="text" name="position" placeholder="Position" value={form.returnedBy.position} onChange={(e) => handleNestedChange(e, "returnedBy")} required />
             <input type="date" name="returnDate" value={form.returnedBy.returnDate} onChange={(e) => handleNestedChange(e, "returnedBy")} required />
+            <input type="text" name="location" placeholder="Where was the item sent?" value={form.returnedBy.location} onChange={(e) => handleNestedChange(e, "returnedBy")}/>
           </div>
 
           {/* Received By */}
@@ -174,6 +175,7 @@
             <input type="text" name="name" placeholder="Name" value={form.receivedBy.name} onChange={(e) => handleNestedChange(e, "receivedBy")} required />
             <input type="text" name="position" placeholder="Position" value={form.receivedBy.position} onChange={(e) => handleNestedChange(e, "receivedBy")} required />
             <input type="date" name="receiveDate" value={form.receivedBy.receiveDate} onChange={(e) => handleNestedChange(e, "receivedBy")} required />
+            <input type="text" name="location" placeholder="Where was the item received?" value={form.receivedBy.location} onChange={(e) => handleNestedChange(e, "receivedBy")}/>
           </div>
 
           {/* Toggle Second Receiver */}
@@ -188,8 +190,10 @@
               <input type="text" name="name" placeholder="Name" value={form.secondReceivedBy.name} onChange={(e) => handleNestedChange(e, "secondReceivedBy")} />
               <input type="text" name="position" placeholder="Position" value={form.secondReceivedBy.position} onChange={(e) => handleNestedChange(e, "secondReceivedBy")} />
               <input type="date" name="receiveDate" value={form.secondReceivedBy.receiveDate} onChange={(e) => handleNestedChange(e, "secondReceivedBy")} />
+              <input type="text" name="location" placeholder="Where was the item received?" value={form.receivedBy.location} onChange={(e) => handleNestedChange(e, "receivedBy")}/>
             </div>
           )}
+          
 
           <button type="submit">Add Entry</button>
         </form>
