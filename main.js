@@ -7,12 +7,11 @@ const express = require("express");
 let mainWindow;
 let backendProcess;
 
-
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    show: false, // Hide window until ready
+    show: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -20,8 +19,8 @@ function createWindow() {
   });
 
   const startURL = app.isPackaged
-    ? "http://localhost:5000" // Serve React via Express in production
-    : "http://localhost:3000"; // Development mode
+    ? "http://localhost:5000"
+    : "http://localhost:3000";
 
   console.log("🔹 Loading URL:", startURL);
   mainWindow.loadURL(startURL);
@@ -48,7 +47,7 @@ function startBackend() {
 
   if (fs.existsSync(serverPath)) {
     console.log(`✅ Starting backend server from: ${serverPath}`);
-    backendProcess = spawn("node", [serverPath], {
+    backendProcess = spawn(process.execPath, [serverPath], {
       stdio: "ignore",
       detached: true,
     });
@@ -61,7 +60,7 @@ function startBackend() {
 function startReactServer() {
   if (app.isPackaged) {
     const server = express();
-    const buildPath = path.join(__dirname, "build");
+    const buildPath = path.join(process.resourcesPath, "build");
 
     server.use(express.static(buildPath));
 

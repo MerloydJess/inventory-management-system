@@ -7,7 +7,7 @@
   const server = express();
   const PDFDocument = require("pdfkit");
   const ExcelJS = require("exceljs");
-  const isPackaged = process.env.NODE_ENV === "production";
+  const isPackaged = require("electron-is-packaged").isPackaged || process.mainModule?.filename.indexOf('app.asar') !== -1;
 
   server.use(bodyParser.json());
   server.use(cors({ origin: "http://localhost:3000" })); // Allow frontend requests
@@ -15,23 +15,37 @@
   // 🚀 Connect to SQLite Database (Creates file if not exists)
 
   const dbPath = isPackaged
-  ? path.join(process.cwd(), "database.sqlite") // Use process.cwd() for packaged mode
-  : path.join(__dirname, "database.sqlite"); // Use local database in development
+  ? path.join(process.resourcesPath, "database.sqlite")
+  : path.join(__dirname, "resources, database.sqlite"); // Use local database in development
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error("❌ Error opening database:", err.message);
   } else {
     console.log(`✅ Connected to SQLite database at ${dbPath}`);
-    createTables(); // ✅ Ensure tables exist
-    insertSampleData(); // ✅ Add default admin if missing
+    
+    createTables(() => {
+      insertSampleData();
+    });
+
   }
 });
-const createTables = () => {
+const createTables = (callback) => {
   db.serialize(() => {
     console.log("ℹ️ Checking/Creating tables...");
 
-    // ✅ Users Table
+    // Track how many async table creations are complete
+    let completed = 0;
+    const total = 3;
+
+    const checkDone = () => {
+      completed += 1;
+      if (completed === total) {
+        console.log("✅ All tables checked/created.");
+        if (callback) callback();
+      }
+    };
+
     db.run(
       `CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,10 +56,10 @@ const createTables = () => {
       (err) => {
         if (err) console.error("❌ Error creating 'users' table:", err.message);
         else console.log("✅ 'users' table ready!");
+        checkDone();
       }
     );
 
-    // ✅ Products Table (Now Includes `created_by`)
     db.run(
       `CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,16 +74,16 @@ const createTables = () => {
         total_amount REAL,
         actual_user TEXT,
         remarks TEXT,
-        created_by INTEGER,  -- Stores the user who added the product
+        created_by INTEGER,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-      )`,
+        )`,
       (err) => {
         if (err) console.error("❌ Error creating 'products' table:", err.message);
         else console.log("✅ 'products' table ready!");
+        checkDone();
       }
     );
 
-    // ✅ Returns Table (Now Includes `created_by`)
     db.run(
       `CREATE TABLE IF NOT EXISTS returns (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,7 +94,7 @@ const createTables = () => {
         ics_no TEXT NOT NULL,
         date_acquired TEXT NOT NULL,
         amount REAL NOT NULL,
-        end_user TEXT NULL, -- End user removed for employees, kept for admin
+        end_user TEXT,
         remarks TEXT,
         returned_by TEXT NOT NULL,
         returned_by_position TEXT NOT NULL,
@@ -88,35 +102,20 @@ const createTables = () => {
         received_by TEXT NOT NULL,
         received_by_position TEXT NOT NULL,
         received_by_date TEXT NOT NULL,
-        second_received_by TEXT NULL,
-        second_received_by_position TEXT NULL,
-        second_received_by_date TEXT NULL,
-        created_by INTEGER,  -- Stores the user who added the return
+        second_received_by TEXT,
+        second_received_by_position TEXT,
+        second_received_by_date TEXT,
+        created_by INTEGER,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-      )`,
+        )`,
       (err) => {
         if (err) console.error("❌ Error creating 'returns' table:", err.message);
         else console.log("✅ 'returns' table ready!");
+        checkDone();
       }
     );
-
-
-      // ✅ Activity Logs Table
-      db.run(`CREATE TABLE IF NOT EXISTS activity_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user TEXT,
-        action TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`, (err) => {
-        if (err) console.error("❌ Error creating 'activity_logs' table:", err.message);
-        else console.log("✅ 'activity_logs' table ready!");
-      });
-
-      console.log("✅ All tables checked/created.");
-    });
-  };
-
-
+  });
+};
 
 
   // 🚀 Insert Sample Users (If None Exist)
