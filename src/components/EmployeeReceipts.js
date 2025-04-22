@@ -34,7 +34,7 @@ const EmployeeReceipts = ({ userName }) => {
       <table>
         <thead>
           <tr>
-            <th>RRSP No.</th>
+          <th>RRSP No.</th>
             <th>Date</th>
             <th>Description</th>
             <th>Quantity</th>
@@ -43,23 +43,43 @@ const EmployeeReceipts = ({ userName }) => {
             <th>Amount</th>
             <th>End User</th>
             <th>Remarks</th>
-            <th>Sender (Returned By)</th>
-            <th>Receiver</th>
-            <th>Second Receiver (Optional)</th>
+            <th>Returned By</th>
+            <th>Returned By Position</th>
+            <th>Returned By Date</th>
+            <th>Location</th>
+            <th>Received By</th>
+            <th>Received By Position</th>
+            <th>Received By Date</th>
+            <th>Location</th>
+            <th>Second Received By</th>
+            <th>Second Received By Position</th>
+            <th>Second Received By Date</th>
+            <th>Location</th>
           </tr>
         </thead>
         <tbody>
           {filteredReceipts.map((receipt) => (
             <tr key={receipt.rrsp_no}>
-              <td>{receipt.rrsp_no}</td>
               <td>{receipt.date}</td>
               <td>{receipt.description}</td>
               <td>{receipt.quantity}</td>
               <td>{receipt.ics_no}</td>
               <td>{receipt.date_acquired}</td>
-              <td>₱{receipt.amount}</td>
+              <td>₱{parseFloat(receipt.amount).toFixed(2)}</td>
               <td>{receipt.end_user}</td>
-              <td>{receipt.remarks || "N/A"}</td>
+              <td>{receipt.remarks}</td>
+              <td>{receipt.returned_by}</td>
+              <td>{receipt.returned_by_position}</td>
+              <td>{receipt.returned_by_date}</td>
+              <td>{receipt.location}</td> 
+              <td>{receipt.received_by}</td>
+              <td>{receipt.received_by_position}</td>
+              <td>{receipt.received_by_date}</td>
+              <td>{receipt.location}</td> 
+              <td>{receipt.second_received_by || "—"}</td>
+              <td>{receipt.second_received_by_position || "—"}</td>
+              <td>{receipt.second_received_by_date || "—"}</td>
+              <td>{receipt.location}</td>
 
               {/* ✅ Show Sender (Returned By) */}
               <td>

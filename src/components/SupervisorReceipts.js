@@ -44,12 +44,16 @@ const SupervisorReceipts = () => {
             <th>Returned By</th>
             <th>Returned By Position</th>
             <th>Returned By Date</th>
+            <th>Location</th>
             <th>Received By</th>
             <th>Received By Position</th>
             <th>Received By Date</th>
+            <th>Location</th>
             <th>Second Received By</th>
             <th>Second Received By Position</th>
             <th>Second Received By Date</th>
+            <th>Location</th>
+
           </tr>
         </thead>
         <tbody>
@@ -67,12 +71,16 @@ const SupervisorReceipts = () => {
               <td>{receipt.returned_by}</td>
               <td>{receipt.returned_by_position}</td>
               <td>{receipt.returned_by_date}</td>
+              <td>{receipt.location}</td> 
               <td>{receipt.received_by}</td>
               <td>{receipt.received_by_position}</td>
               <td>{receipt.received_by_date}</td>
+              <td>{receipt.location}</td> 
               <td>{receipt.second_received_by || "—"}</td>
               <td>{receipt.second_received_by_position || "—"}</td>
               <td>{receipt.second_received_by_date || "—"}</td>
+              <td>{receipt.location}</td> 
+
             </tr>
           ))}
         </tbody>

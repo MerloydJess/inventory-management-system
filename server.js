@@ -8,15 +8,15 @@
   const PDFDocument = require("pdfkit");
   const ExcelJS = require("exceljs");
   const isPackaged = require("electron-is-packaged").isPackaged || process.mainModule?.filename.indexOf('app.asar') !== -1;
+  const PORT = process.env.PORT || 5000;
 
   server.use(bodyParser.json());
-  server.use(cors({ origin: "http://localhost:3000" })); // Allow frontend requests
   
   // 🚀 Connect to SQLite Database (Creates file if not exists)
 
   const dbPath = isPackaged
   ? path.join(process.resourcesPath, "database.sqlite")
-  : path.join(__dirname, "resources, database.sqlite"); // Use local database in development
+  : path.join(__dirname, "resources", "database.sqlite"); // Use local database in development
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
@@ -370,18 +370,18 @@ const createTables = (callback) => {
 
   // employee add returns
   server.post('/api/returns', (req, res) => {
-    const { employee, itemName, quantity, reason, date } = req.body;
+    const { employee, itemName, quantity, reason, date, location } = req.body;
   
     if (!employee || !itemName || !quantity || !reason || !date) {
       return res.status(400).json({ error: "Missing return data." });
     }
   
     const query = `
-      INSERT INTO returns (employee, itemName, quantity, reason, date)
+      INSERT INTO returns (employee, itemName, quantity, reason, date, location)
       VALUES (?, ?, ?, ?, ?)
     `;
   
-    db.run(query, [employee, itemName, quantity, reason, date], function (err) {
+    db.run(query, [employee, itemName, quantity, reason, date, location], function (err) {
       if (err) {
         console.error("Error inserting return:", err);
         return res.status(500).json({ error: "Failed to submit return." });
@@ -427,8 +427,15 @@ const createTables = (callback) => {
     });
   });
 
+  // Serve React build for all other requests
+  const buildPath = path.join(__dirname, "build");
+  server.use(express.static(buildPath));
+  server.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "build", "index.html"));
+  });
+
     
   // 🚀 Start Express Server
-  server.listen(5000, () => {
-    console.log("🚀 Express server running on port 5000");
+  server.listen(PORT, () => {
+    console.log(`🚀 Express server running on port ${PORT}`);
   });

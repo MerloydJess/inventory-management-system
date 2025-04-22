@@ -1,21 +1,30 @@
 /* 🌟 Main Container */
 .employee-receipts {
   width: 90%;
-  max-width: 1200px; /* ✅ Ensures content fits well */
-  margin: 0 auto;
-  padding: 30px;
-  background: #ffffff;
+  max-width: 1400px;
+  margin: 20px auto;
+  padding: 15px;
+  background: white;
   border-radius: 12px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  transition: all 0.3s ease-in-out;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
 }
 
-/* 📄 Table Wrapper - Ensures No Overflow */
-.employee-receipts .table-container {
-  overflow-x: auto; /* ✅ Prevents horizontal scrolling */
-  max-width: 100%;
-  white-space: nowrap;
+/* ✅ Title & Search (optional addition if needed) */
+.employee-receipts h2 {
+  text-align: center;
+  color: #333;
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+
+.employee-receipts input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
 }
 
 /* 📄 Table Styling */
@@ -23,52 +32,59 @@
   width: 100%;
   border-collapse: collapse;
   background: #fff;
-  table-layout: fixed; /* ✅ Keeps columns even */
+  font-size: 14px;
+  table-layout: auto; /* Let the table adjust column width */
 }
 
-/* 📌 Table Header */
+/* 📌 Table Headers */
 .employee-receipts th {
-  background-color: #007bff;
+  background: #007bff;
   color: white;
+  padding: 12px;
   text-align: center;
-  padding: 14px;
-  font-size: 16px;
   font-weight: bold;
   border-bottom: 2px solid #0056b3;
-  word-wrap: break-word;
+  word-break: break-word;
+  min-width: 120px; /* Minimum width for headers */
+  vertical-align: middle; /* Center align vertically */
+  white-space: normal; /* Allow text to wrap within the header */
 }
 
 /* 📌 Table Cells */
 .employee-receipts td {
-  padding: 12px;
-  border: 1px solid #ddd;
+  padding: 10px;
   text-align: center;
-  font-size: 14px;
-  word-wrap: break-word;
+  border: 1px solid #ddd;
   white-space: normal;
+  word-break: break-word; /* Allow text to wrap within the cell */
+  min-width: 120px;
+  vertical-align: middle;
+  background: #f9f9f9;
 }
 
-/* ✅ Adjust Column Widths */
-.employee-receipts th,
-.employee-receipts td {
-  min-width: 80px;
+/* ✅ Alternate Row Colors */
+.employee-receipts tbody tr:nth-child(even) {
+  background: #f8f9fa;
 }
 
-/* ✅ Responsive Adjustments */
-@media screen and (max-width: 1024px) {
+.employee-receipts tbody tr:hover {
+  background: #e6f7ff;
+}
+
+/* 📱 Responsive */
+@media (max-width: 1024px) {
   .employee-receipts {
     width: 95%;
+    padding: 10px;
   }
 
   .employee-receipts table {
+    font-size: 12px;
     table-layout: auto;
-    display: block;
-    overflow-x: auto;
   }
 
   .employee-receipts th,
   .employee-receipts td {
-    padding: 10px;
-    font-size: 14px;
+    padding: 8px;
   }
 }

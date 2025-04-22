@@ -18,11 +18,8 @@ function createWindow() {
     },
   });
 
-  const startURL = app.isPackaged
-    ? "http://localhost:5000"
-    : "http://localhost:3000";
+  const startURL = "http://localhost:5000";
 
-  console.log("🔹 Loading URL:", startURL);
   mainWindow.loadURL(startURL);
 
   mainWindow.webContents.once("did-finish-load", () => {
@@ -34,8 +31,8 @@ function createWindow() {
   }
 
   mainWindow.on("closed", () => {
-    mainWindow = null;
     stopBackendProcess();
+    mainWindow = null;
   });
 }
 
@@ -45,31 +42,33 @@ function startBackend() {
     ? path.join(process.resourcesPath, "server.js")
     : path.join(__dirname, "server.js");
 
+  const backendPort = isPackaged ? 4000 : 5000;
+
   if (fs.existsSync(serverPath)) {
-    console.log(`✅ Starting backend server from: ${serverPath}`);
-    backendProcess = spawn(process.execPath, [serverPath], {
-      stdio: "ignore",
-      detached: true,
+    console.log(`✅ Starting backend server from: ${serverPath} on port ${backendPort}`);
+    backendProcess = spawn("node", [serverPath], {
+      stdio: "inherit",
+      shell: true,
+      env: { ...process.env, PORT: backendPort.toString() },
     });
     backendProcess.unref();
   } else {
-    console.error(`⚠️ ERROR: Backend server not found at ${serverPath}`);
+    console.error(`❌ server.js not found at ${serverPath}`);
   }
 }
 
 function startReactServer() {
   if (app.isPackaged) {
     const server = express();
-    const buildPath = path.join(process.resourcesPath, "build");
+    const buildPath = path.join(process.resourcesPath, "app", "build");
 
     server.use(express.static(buildPath));
-
     server.get("*", (req, res) => {
       res.sendFile(path.join(buildPath, "index.html"));
     });
 
     server.listen(5000, () => {
-      console.log("✅ React App is being served at http://localhost:5000");
+      console.log("✅ Express serving React at http://localhost:5000");
     });
   }
 }
@@ -77,7 +76,7 @@ function startReactServer() {
 function stopBackendProcess() {
   if (backendProcess) {
     backendProcess.kill();
-    console.log("✅ Backend process killed.");
+    console.log("✅ Backend process stopped.");
   }
 }
 
@@ -95,7 +94,9 @@ app.on("window-all-closed", () => {
 });
 
 app.on("activate", () => {
-  if (mainWindow === null) createWindow();
+  if (mainWindow === null) {
+    createWindow();
+  }
 });
 
 const gotTheLock = app.requestSingleInstanceLock();

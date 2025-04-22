@@ -2,9 +2,7 @@ import axios from "axios";
 import "./Login.css";
 import React, { useState, useEffect } from "react";
 
-const API_BASE_URL = process.env.NODE_ENV === "development" 
-  ? "http://localhost:5000" 
-  : "http://127.0.0.1:5000"; // ✅ Use dynamic URL
+const API_BASE_URL = "";
 
 const Login = ({ onLogin }) => {
   const [name, setName] = useState("");
@@ -19,11 +17,12 @@ const Login = ({ onLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Clear previous errors
-
+    setError("");
+  
     try {
-      const res = await axios.post("http://localhost:5000/login", { name, password });
+      const res = await axios.post(`${API_BASE_URL}/login`, { name, password });
 
+  
       if (res.data.role) {
         onLogin(res.data.role, name);
       } else {

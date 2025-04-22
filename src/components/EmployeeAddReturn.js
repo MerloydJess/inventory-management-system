@@ -14,9 +14,9 @@ const EmployeeAddReturn = ({ userName }) => {
     dateAcquired: "",
     amount: "",
     remarks: "",
-    returnedBy: { name: userName, position: "Employee", returnDate: "" },
-    receivedBy: { name: "", position: "", receiveDate: "" },
-    secondReceivedBy: { name: "", position: "", receiveDate: "" },
+    returnedBy: { name: userName, position: "Employee", returnDate: "", location: "", },
+    receivedBy: { name: "", position: "", receiveDate: "", location: "" },
+    secondReceivedBy: { name: "", position: "", receiveDate: "", location: "" },
   });
 
   const handleChange = (e) => {
@@ -147,6 +147,14 @@ const EmployeeAddReturn = ({ userName }) => {
             onChange={(e) => handleNestedChange(e, "returnedBy")}
             required
           />
+          <input
+            type="text"
+            name="location"
+            placeholder="e.g., Provincial Capitol, Office A"
+            value={form.location}
+            onChange={handleChange}
+            required
+          />
         </div>
 
         <div className="form-group">
@@ -172,6 +180,14 @@ const EmployeeAddReturn = ({ userName }) => {
             name="receiveDate"
             value={form.receivedBy.receiveDate}
             onChange={(e) => handleNestedChange(e, "receivedBy")}
+            required
+          />
+          <input
+            type="text"
+            name="location"
+            placeholder="e.g., Provincial Capitol, Office A"
+            value={form.location}
+            onChange={handleChange}
             required
           />
         </div>
@@ -202,6 +218,14 @@ const EmployeeAddReturn = ({ userName }) => {
               name="receiveDate"
               value={form.secondReceivedBy.receiveDate}
               onChange={(e) => handleNestedChange(e, "secondReceivedBy")}
+            />
+            <input
+              type="text"
+              name="location"
+              placeholder="e.g., Provincial Capitol, Office A"
+              value={form.location}
+              onChange={handleChange}
+              required
             />
           </div>
         )}
