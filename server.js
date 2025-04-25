@@ -1,6 +1,5 @@
   const express = require("express");
   const sqlite3 = require("sqlite3").verbose(); // ✅ Using SQLite3
-  const bodyParser = require("body-parser");
   const cors = require("cors");
   const bcrypt = require("bcryptjs");
   const path = require("path");
@@ -9,8 +8,16 @@
   const ExcelJS = require("exceljs");
   const isPackaged = require("electron-is-packaged").isPackaged || process.mainModule?.filename.indexOf('app.asar') !== -1;
   const PORT = process.env.PORT || 5000;
+  const isDev = process.env.NODE_ENV === "development";
 
-  server.use(bodyParser.json());
+
+  if (isDev) {
+    console.log("🧪 Development mode: Enabling CORS");
+    server.use(cors({ origin: "http://localhost:3000" }));
+  }
+
+  
+  server.use(express.json());
   
   // 🚀 Connect to SQLite Database (Creates file if not exists)
 
@@ -117,7 +124,20 @@ const createTables = (callback) => {
   });
 };
 
+// 🚀 User Login
+server.post("/login", (req, res) => {
+  const { name, password } = req.body;
 
+  db.get(`SELECT role, password FROM users WHERE LOWER(name) = LOWER(?)`, [name], (err, user) => {
+    if (err) return res.status(500).json({ error: "Database error", details: err.message });
+    if (!user) return res.status(401).json({ role: null });
+
+    bcrypt.compare(password, user.password, (err, isMatch) => {
+      if (err) return res.status(500).json({ error: "Error checking password" });
+      res.status(200).json({ role: isMatch ? user.role : null });
+    });
+  });
+});
   // 🚀 Insert Sample Users (If None Exist)
   const insertSampleData = async () => {
     db.get("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'", async (err, row) => {
@@ -169,21 +189,6 @@ const createTables = (callback) => {
         res.status(200).json({ message: "✅ User added successfully" });
       }
     );
-  });
-
-  // 🚀 User Login
-  server.post("/login", (req, res) => {
-    const { name, password } = req.body;
-
-    db.get(`SELECT role, password FROM users WHERE LOWER(name) = LOWER(?)`, [name], (err, user) => {
-      if (err) return res.status(500).json({ error: "Database error", details: err.message });
-      if (!user) return res.status(401).json({ role: null });
-
-      bcrypt.compare(password, user.password, (err, isMatch) => {
-        if (err) return res.status(500).json({ error: "Error checking password" });
-        res.status(200).json({ role: isMatch ? user.role : null });
-      });
-    });
   });
 
   // 🚀 Add Product
@@ -427,11 +432,16 @@ const createTables = (callback) => {
     });
   });
 
+  
   // Serve React build for all other requests
-  const buildPath = path.join(__dirname, "build");
+  const buildPath = isPackaged
+  ? path.join(process.resourcesPath, "app", "build")  // ✅ correct in packaged
+  : path.join(__dirname, "build");
+
+  server.get("/ping", (_, res) => res.send("pong"))
   server.use(express.static(buildPath));
   server.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "build", "index.html"));
+  res.sendFile(path.join(buildPath, "index.html"));
   });
 
     

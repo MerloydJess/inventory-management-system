@@ -1,12 +1,13 @@
+// main.js
 const { app, BrowserWindow } = require("electron");
 const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
-const express = require("express");
 
 let mainWindow;
 let backendProcess;
 
+// ✅ Create main app window
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -18,7 +19,7 @@ function createWindow() {
     },
   });
 
-  const startURL = "http://localhost:5000";
+  const startURL = "http://localhost:5000"; // Same port as Express
 
   mainWindow.loadURL(startURL);
 
@@ -36,16 +37,17 @@ function createWindow() {
   });
 }
 
+// ✅ Start Express backend
 function startBackend() {
   const isPackaged = app.isPackaged;
   const serverPath = isPackaged
-    ? path.join(process.resourcesPath, "server.js")
+    ? path.join(process.resourcesPath, "app", "server.js")
     : path.join(__dirname, "server.js");
 
-  const backendPort = isPackaged ? 4000 : 5000;
+  const backendPort = 5000;
 
   if (fs.existsSync(serverPath)) {
-    console.log(`✅ Starting backend server from: ${serverPath} on port ${backendPort}`);
+    console.log(`✅ Starting backend: ${serverPath} on port ${backendPort}`);
     backendProcess = spawn("node", [serverPath], {
       stdio: "inherit",
       shell: true,
@@ -57,22 +59,7 @@ function startBackend() {
   }
 }
 
-function startReactServer() {
-  if (app.isPackaged) {
-    const server = express();
-    const buildPath = path.join(process.resourcesPath, "app", "build");
-
-    server.use(express.static(buildPath));
-    server.get("*", (req, res) => {
-      res.sendFile(path.join(buildPath, "index.html"));
-    });
-
-    server.listen(5000, () => {
-      console.log("✅ Express serving React at http://localhost:5000");
-    });
-  }
-}
-
+// ✅ Stop backend when app quits
 function stopBackendProcess() {
   if (backendProcess) {
     backendProcess.kill();
@@ -80,12 +67,13 @@ function stopBackendProcess() {
   }
 }
 
+// ✅ Entry point
 app.whenReady().then(() => {
   startBackend();
-  startReactServer();
   createWindow();
 });
 
+// ✅ Cleanup on all closed
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     stopBackendProcess();
@@ -93,12 +81,14 @@ app.on("window-all-closed", () => {
   }
 });
 
+// ✅ macOS activate
 app.on("activate", () => {
   if (mainWindow === null) {
     createWindow();
   }
 });
 
+// ✅ Ensure single instance
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();

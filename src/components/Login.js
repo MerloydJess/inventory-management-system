@@ -2,7 +2,10 @@ import axios from "axios";
 import "./Login.css";
 import React, { useState, useEffect } from "react";
 
-const API_BASE_URL = "";
+const API_BASE_URL =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:5000"
+    : "";
 
 const Login = ({ onLogin }) => {
   const [name, setName] = useState("");
