@@ -11,10 +11,11 @@
   const isDev = process.env.NODE_ENV === "development";
 
 
-  if (isDev) {
-    console.log("🧪 Development mode: Enabling CORS");
+  if (process.env.NODE_ENV === "development") {
+    const cors = require("cors");
     server.use(cors({ origin: "http://localhost:3000" }));
   }
+  
 
   
   server.use(express.json());
@@ -435,7 +436,7 @@ server.post("/login", (req, res) => {
   
   // Serve React build for all other requests
   const buildPath = isPackaged
-  ? path.join(process.resourcesPath, "app", "build")  // ✅ correct in packaged
+  ? path.join(process.resourcesPath, "build")  // ✅ correct in packaged
   : path.join(__dirname, "build");
 
   server.get("/ping", (_, res) => res.send("pong"))

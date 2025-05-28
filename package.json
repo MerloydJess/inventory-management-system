@@ -55,7 +55,7 @@
       "output": "dist"
     },
     "files": [
-      "build/**/*",
+      "build",
       "main.js",
       "server.js"
     ],

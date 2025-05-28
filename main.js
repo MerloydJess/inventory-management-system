@@ -7,7 +7,6 @@ const fs = require("fs");
 let mainWindow;
 let backendProcess;
 
-// ✅ Create main app window
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -19,12 +18,16 @@ function createWindow() {
     },
   });
 
-  const startURL = "http://localhost:5000"; // Same port as Express
+  const startURL = "http://localhost:5000";
 
   mainWindow.loadURL(startURL);
 
   mainWindow.webContents.once("did-finish-load", () => {
     mainWindow.show();
+  });
+
+  mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
+    console.error("❌ Failed to load URL:", errorDescription);
   });
 
   if (!app.isPackaged) {
@@ -37,29 +40,40 @@ function createWindow() {
   });
 }
 
-// ✅ Start Express backend
 function startBackend() {
   const isPackaged = app.isPackaged;
   const serverPath = isPackaged
-    ? path.join(process.resourcesPath, "app", "server.js")
+    ? path.join(process.resourcesPath, "server.js")
     : path.join(__dirname, "server.js");
 
   const backendPort = 5000;
 
   if (fs.existsSync(serverPath)) {
     console.log(`✅ Starting backend: ${serverPath} on port ${backendPort}`);
+
     backendProcess = spawn("node", [serverPath], {
-      stdio: "inherit",
       shell: true,
       env: { ...process.env, PORT: backendPort.toString() },
     });
+
+    backendProcess.stdout.on("data", (data) => {
+      console.log("📦 Backend:", data.toString());
+    });
+
+    backendProcess.stderr.on("data", (data) => {
+      console.error("❌ Backend Error:", data.toString());
+    });
+
+    backendProcess.on("exit", (code) => {
+      console.log("🚪 Backend exited with code:", code);
+    });
+
     backendProcess.unref();
   } else {
     console.error(`❌ server.js not found at ${serverPath}`);
   }
 }
 
-// ✅ Stop backend when app quits
 function stopBackendProcess() {
   if (backendProcess) {
     backendProcess.kill();
@@ -67,13 +81,11 @@ function stopBackendProcess() {
   }
 }
 
-// ✅ Entry point
 app.whenReady().then(() => {
   startBackend();
   createWindow();
 });
 
-// ✅ Cleanup on all closed
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     stopBackendProcess();
@@ -81,14 +93,12 @@ app.on("window-all-closed", () => {
   }
 });
 
-// ✅ macOS activate
 app.on("activate", () => {
   if (mainWindow === null) {
     createWindow();
   }
 });
 
-// ✅ Ensure single instance
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
