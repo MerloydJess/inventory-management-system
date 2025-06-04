@@ -8,13 +8,13 @@
   const ExcelJS = require("exceljs");
   const isPackaged = require("electron-is-packaged").isPackaged || process.mainModule?.filename.indexOf('app.asar') !== -1;
   const PORT = process.env.PORT || 5000;
-  const isDev = process.env.NODE_ENV === "development";
+  const isDev = !isPackaged;
+  process.env.NODE_ENV = isDev ? "development" : "production";
 
-
-  if (process.env.NODE_ENV === "development") {
-    const cors = require("cors");
-    server.use(cors({ origin: "http://localhost:3000" }));
-  }
+  // ✅ Enable CORS in development mode
+  if (isDev) {
+  server.use(cors({ origin: "http://localhost:3000" }));
+}
   
 
   
@@ -193,74 +193,104 @@ server.post("/login", (req, res) => {
   });
 
   // 🚀 Add Product
-  server.post("/add-product", (req, res) => {
-    const { userName, article, description, date_acquired, property_number, unit, unit_value, 
-            balance_per_card, on_hand_per_count, total_amount, remarks } = req.body;
+server.post("/add-product", (req, res) => {
+  const {
+    userName,
+    article,
+    description,
+    date_acquired,
+    property_number,
+    unit,
+    unit_value,
+    balance_per_card,
+    on_hand_per_count,
+    total_amount,
+    remarks,
+    actual_user: assignedTo, // ✅ rename to avoid conflict
+  } = req.body;
 
-    // Automatically assign the product to the logged-in employee
-    const actual_user = userName; 
+  const actual_user = assignedTo || userName || null; // ✅ correctly fallback
 
-    db.run(
-      `INSERT INTO products (article, description, date_acquired, property_number, unit, unit_value, 
-                            balance_per_card, on_hand_per_count, total_amount, actual_user, remarks) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-
-      [article, description, date_acquired, property_number, unit, unit_value, 
-      balance_per_card, on_hand_per_count, total_amount, actual_user, remarks],
-
-      (err) => {
-        if (err) {
-          console.error("❌ Database Error:", err.message);
-          return res.status(500).json({ error: "Database error", details: err.message });
-        }
-        res.status(200).json({ message: "✅ Product added successfully!", assignedTo: actual_user });
-      }
-    );
-});
-
-
-  //Adding of receipt
-  server.post("/add-receipt", (req, res) => {
-    console.log("🔍 Incoming Return Data:", req.body); // ✅ Debugging
-
-    const {
-      rrspNo, date, description, quantity, icsNo, dateAcquired, amount, endUser, remarks,
-      returnedBy, returnedByPosition, returnedByDate,
-      receivedBy, receivedByPosition, receivedByDate,
-      secondReceivedBy = null, secondReceivedByPosition = null, secondReceivedByDate = null
-    } = req.body;
-
-    // ✅ Ensure all required fields exist
-    if (!rrspNo || !date || !description || !quantity || !icsNo || !dateAcquired || !amount || !endUser ||
-      !returnedBy.name || !returnedBy.position || !returnedBy.returnDate ||
-      !receivedBy.name || !receivedBy.position || !receivedBy.receiveDate) {
-    console.error("❌ Missing Fields:", req.body);
-    return res.status(400).json({ error: "Missing required fields", details: req.body });
-    }
-
-    const sql = `INSERT INTO returns (
-        rrsp_no, date, description, quantity, ics_no, date_acquired, amount, end_user, remarks, 
-        returned_by, returned_by_position, returned_by_date, 
-        received_by, received_by_position, received_by_date,
-        second_received_by, second_received_by_position, second_received_by_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-    const values = [
-      rrspNo, date, description, quantity, icsNo, dateAcquired, amount, endUser, remarks || null,
-    returnedBy.name, returnedBy.position?.trim() || null, returnedBy.returnDate,
-    receivedBy.name, receivedBy.position?.trim() || null, receivedBy.receiveDate,
-    secondReceivedBy?.name?.trim() || null, secondReceivedBy?.position?.trim() || null, secondReceivedBy?.receiveDate?.trim() || null
-    ];
-
-    db.run(sql, values, function (err) {
+  db.run(
+    `INSERT INTO products (
+      article, description, date_acquired, property_number, unit, unit_value, 
+      balance_per_card, on_hand_per_count, total_amount, actual_user, remarks
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      article,
+      description,
+      date_acquired,
+      property_number,
+      unit,
+      unit_value,
+      balance_per_card,
+      on_hand_per_count,
+      total_amount,
+      actual_user,
+      remarks,
+    ],
+    (err) => {
       if (err) {
         console.error("❌ Database Error:", err.message);
         return res.status(500).json({ error: "Database error", details: err.message });
       }
-      console.log("✅ Receipt Added:", { id: this.lastID });
-      res.status(200).json({ message: "✅ Receipt added successfully", receiptId: this.lastID });
-    });
+      res.status(200).json({ message: "✅ Product added successfully!", assignedTo: actual_user });
+    }
+  );
+});
+
+// 🚀 Add Receipt (Return)
+server.post("/add-receipt", (req, res) => {
+  console.log("🔍 Incoming Return Data:", req.body);
+
+  const {
+    rrspNo, date, description, quantity, icsNo, dateAcquired, amount, endUser, remarks,
+    returnedBy,
+    receivedBy,
+    secondReceivedBy = {}
+  } = req.body;
+
+  const returnedByLocation = returnedBy?.location;
+  const receivedByLocation = receivedBy?.location;
+  const secondReceivedByLocation = secondReceivedBy?.location || null;
+
+  // ✅ Validate required fields
+  if (
+    !rrspNo || !date || !description || !quantity || !icsNo || !dateAcquired || !amount || !endUser ||
+    !returnedBy.name || !returnedBy.position || !returnedBy.returnDate || !returnedByLocation ||
+    !receivedBy.name || !receivedBy.position || !receivedBy.receiveDate || !receivedByLocation
+  ) {
+    console.error("❌ Missing Fields:", req.body);
+    return res.status(400).json({ error: "Missing required fields", details: req.body });
+  }
+
+  const sql = `
+    INSERT INTO returns (
+      rrsp_no, date, description, quantity, ics_no, date_acquired, amount, end_user, remarks,
+      returned_by, returned_by_position, returned_by_date, returned_by_location,
+      received_by, received_by_position, received_by_date, received_by_location,
+      second_received_by, second_received_by_position, second_received_by_date, second_received_by_location
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  const values = [
+    rrspNo, date, description, quantity, icsNo, dateAcquired, amount, endUser, remarks || null,
+    returnedBy.name, returnedBy.position?.trim() || null, returnedBy.returnDate, returnedByLocation,
+    receivedBy.name, receivedBy.position?.trim() || null, receivedBy.receiveDate, receivedByLocation,
+    secondReceivedBy?.name?.trim() || null, secondReceivedBy?.position?.trim() || null,
+    secondReceivedBy?.receiveDate?.trim() || null, secondReceivedByLocation
+  ];
+
+  db.run(sql, values, function (err) {
+    if (err) {
+      console.error("❌ Database Error:", err.message);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
+    console.log("✅ Receipt Added:", { id: this.lastID });
+    res.status(200).json({ message: "✅ Receipt added successfully", receiptId: this.lastID });
   });
+});
+
 
   // 🚀 Get Products for Employee
   server.get("/get-products/:user", (req, res) => {

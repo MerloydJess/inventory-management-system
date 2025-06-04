@@ -97,6 +97,10 @@ const EmployeeAddArticle = ({ userName }) => {
           <input type="number" name="balance_per_card" value={form.balance_per_card} onChange={handleChange} />
         </div>
         <div className="form-group">
+          <label>On Hand Per Count</label>
+          <input type="number" name="on_hand_per_count" placeholder="On Hand Per Count" value={form.on_hand_per_count} onChange={handleChange} />
+        </div>
+        <div className="form-group">
           <label>Total Amount</label>
           <input type="number" name="total_amount" value={form.total_amount} readOnly />
         </div>

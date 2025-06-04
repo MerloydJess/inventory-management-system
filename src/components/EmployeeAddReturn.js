@@ -50,9 +50,17 @@ const EmployeeAddReturn = ({ userName }) => {
       !payload.returnedBy.name ||
       !payload.returnedBy.position ||
       !payload.returnedBy.returnDate ||
+      !payload.returnedBy.location ||
       !payload.receivedBy.name ||
       !payload.receivedBy.position ||
-      !payload.receivedBy.receiveDate
+      !payload.receivedBy.receiveDate ||
+      !payload.receivedBy.location  ||
+      (showSecondReceiver && 
+        (!payload.secondReceivedBy.name ||
+        !payload.secondReceivedBy.position ||
+        !payload.secondReceivedBy.receiveDate ||
+        !payload.secondReceivedBy.location) 
+      )
     ) {
       alert("Please fill out all required fields.");
       return;
@@ -78,9 +86,9 @@ const EmployeeAddReturn = ({ userName }) => {
           dateAcquired: "",
           amount: "",
           remarks: "",
-          returnedBy: { name: userName, position: "Employee", returnDate: "" },
-          receivedBy: { name: "", position: "", receiveDate: "" },
-          secondReceivedBy: { name: "", position: "", receiveDate: "" },
+          returnedBy: { name: userName, position: "Employee", returnDate: "", location: "" },
+          receivedBy: { name: "", position: "", receiveDate: "", location: "" },
+          secondReceivedBy: { name: "", position: "", receiveDate: "", location: "" },
         });
       } else {
         alert(`Error: ${data.error}`);
@@ -130,7 +138,7 @@ const EmployeeAddReturn = ({ userName }) => {
           <label>Remarks</label>
           <select name="remarks" value={form.remarks} onChange={handleChange}>
             <option value="">Select Remark</option>
-            <option value="Functional">Functional</option>
+            <option value="Functional">Damaged</option>
             <option value="Destroyed">Destroyed</option>
             <option value="For Disposal">For Disposal</option>
           </select>
@@ -151,8 +159,8 @@ const EmployeeAddReturn = ({ userName }) => {
             type="text"
             name="location"
             placeholder="e.g., Provincial Capitol, Office A"
-            value={form.location}
-            onChange={handleChange}
+            value={form.returnedBy.location}
+            onChange={(e) => handleNestedChange(e, "returnedBy")}
             required
           />
         </div>
@@ -186,8 +194,8 @@ const EmployeeAddReturn = ({ userName }) => {
             type="text"
             name="location"
             placeholder="e.g., Provincial Capitol, Office A"
-            value={form.location}
-            onChange={handleChange}
+            value={form.receivedBy.location}
+            onChange={(e) => handleNestedChange(e, "receivedBy")}
             required
           />
         </div>
@@ -223,8 +231,8 @@ const EmployeeAddReturn = ({ userName }) => {
               type="text"
               name="location"
               placeholder="e.g., Provincial Capitol, Office A"
-              value={form.location}
-              onChange={handleChange}
+              value={form.secondReceivedBy.location}
+              onChange={(e) => handleNestedChange(e, "secondReceivedBy")}
               required
             />
           </div>

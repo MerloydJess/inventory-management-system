@@ -88,9 +88,9 @@
             amount: "",
             endUser: "",
             remarks: "",
-            returnedBy: { name: "", position: "", returnDate: "" },
-            receivedBy: { name: "", position: "", receiveDate: "" },
-            secondReceivedBy: { name: "", position: "", receiveDate: "" },
+            returnedBy: { name: "", position: "", returnDate: "", location: "" },
+            receivedBy: { name: "", position: "", receiveDate: "", location: "" },
+            secondReceivedBy: { name: "", position: "", receiveDate: "", location: "" },
           });
         } else {
           console.error("❌ Server Error:", data);

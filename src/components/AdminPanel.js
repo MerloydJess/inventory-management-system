@@ -93,6 +93,7 @@ const AdminPanel = () => {
     const cleanTotalAmount = parseFloat(product.total_amount.replace(/[₱,]/g, "")) || 0;
     const productData = {
       ...product,
+      userName: "Administrator", // Assuming admin user is adding the product
       date_acquired: product.date_acquired || null,
       total_amount: cleanTotalAmount
     };
@@ -242,9 +243,9 @@ const AdminPanel = () => {
     required
   />
   <select name="role" value={newUser.role} onChange={handleUserChange} required>
-    <option value="admin">Admin</option>
-    <option value="employee">Employee</option>
-    <option value="supervisor">Supervisor</option>
+    <option value="admin">Administrator</option>
+    <option value="employee">Instructor</option>
+    <option value="supervisor">Admin</option>
   </select>
   <button type="submit">Save User</button>
   <button type="button" onClick={() => setShowUserForm(false)}>Cancel</button>
