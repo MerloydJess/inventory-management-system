@@ -2,13 +2,15 @@ import axios from "axios";
 import React, { useState, useEffect } from "react";
 import "./SupervisorArticles.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 const SupervisorArticles = () => {
   const [articles, setArticles] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/api/products/all") // ✅ Fetch all products
+      .get(`${API_BASE_URL}/api/products/all`) // ✅ Fetch all products
       .then((res) => {
         console.log("✅ Fetched Products:", res.data);
         setArticles(res.data);

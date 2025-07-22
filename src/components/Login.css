@@ -3,40 +3,73 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background: linear-gradient(135deg, #1E3C72, #2A5298);
+  min-height: 100vh;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* 🔹 Login Selector */
+.login-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  min-height: 100vh;
+  justify-content: center;
+}
+
+.login-selector h2 {
+  font-size: 2rem;
+  margin-bottom: 24px;
+  color: #333;
 }
 
 /* 🔹 Login Container */
 .login-container {
   background: rgba(255, 255, 255, 0.15);
-  padding: 40px;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
-  width: 350px;
-  text-align: center;
-  color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  width: 100%;
+  max-width: 400px;
+  margin: 40px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* 🔹 Login Title */
 .login-container h2 {
-  font-size: 26px;
-  margin-bottom: 20px;
-  font-weight: bold;
+  color: white;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 1.8rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 🔹 Login Form */
+.login-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  margin-bottom: 8px;
 }
 
 /* 🔹 Input Fields */
 .login-container input {
-  width: 100%;
-  padding: 12px;
-  margin: 10px 0;
+  padding: 0.8rem 1rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.2);
   color: white;
-  font-size: 16px;
-  transition: 0.3s;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  width: 100%;
+  margin: 10px 0;
 }
 
 .login-container input::placeholder {
@@ -44,33 +77,213 @@
 }
 
 .login-container input:focus {
-  border: 1px solid #fff;
   outline: none;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
 }
 
-/* 🔹 Login Button */
-.login-container button {
-  width: 100%;
+.login-container input[type="text"],
+.login-container input[type="password"] {
   padding: 12px;
-  background: linear-gradient(90deg, #FF416C, #FF4B2B);
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  outline: none;
+  transition: border 0.2s;
+  background: #f8fafd;
+}
+
+.login-container input[type="text"]:focus,
+.login-container input[type="password"]:focus {
+  border: 1.5px solid #0078d4;
+  background: #e6f0fa;
+}
+
+/* 🔹 Login Buttons */
+.login-container button[type="submit"],
+.login-container button[type="button"] {
+  padding: 0.8rem;
   border: none;
-  border-radius: 8px;
-  color: white;
-  font-size: 18px;
-  font-weight: bold;
+  border-radius: 6px;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  width: 100%;
+  margin-bottom: 8px;
 }
 
-.login-container button:hover {
-  transform: scale(1.05);
-  background: linear-gradient(90deg, #FF4B2B, #FF416C);
+.login-container button[type="submit"] {
+  background: linear-gradient(135deg, #6e8efb, #4a6cf7);
+  color: white;
+  font-weight: 600;
+  transition: background 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+.login-container button[type="submit"]:hover {
+  background: linear-gradient(135deg, #4a6cf7, #6e8efb);
+  transform: translateY(-1px);
+}
+
+/* 🔹 Back Button */
+.login-container .back-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  margin-top: 0.5rem;
+  border: none;
+  border-radius: 6px;
+  padding: 12px;
+  width: 100%;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.login-container .back-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.login-container .back-button {
+  font-size: 1.1rem;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+/* 🔹 Login Selector Buttons */
+.login-selector-buttons {
+  display: flex;
+  gap: 24px;
+}
+
+.login-selector-buttons button {
+  padding: 16px 32px;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  border: none;
+  background: #f0f0f0;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.login-selector-buttons button.selected,
+.login-selector-buttons button:hover {
+  background: #0078d4;
+  color: #fff;
 }
 
 /* 🔹 Error Message */
 .error {
-  color: #ff4b2b;
-  font-size: 14px;
-  margin-top: 10px;
+  color: #ff6b6b;
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+/* 🔹 Employee ID Display */
+.employee-id-display {
+  margin-top: 16px;
+  background: #f6f8fa;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 🔹 Login Form */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  padding: 2.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.login-form input {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.login-form input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.login-form input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.login-form button {
+  width: 100%;
+  padding: 1rem;
+  margin-top: 1rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-form button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.login-form button:active {
+  transform: translateY(0);
+}
+
+.login-title {
+  font-size: 2rem;
+  color: #ffffff;
+  margin-bottom: 2rem;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.error-message {
+  color: #ff6b6b;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+/* Back Button */
+.back-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.2);
 }

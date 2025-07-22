@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./EmployeeAddReturn.css";
+
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 const EmployeeAddReturn = ({ userName }) => {
   const [showSecondReceiver, setShowSecondReceiver] = useState(false);
@@ -18,6 +20,8 @@ const EmployeeAddReturn = ({ userName }) => {
     receivedBy: { name: "", position: "", receiveDate: "", location: "" },
     secondReceivedBy: { name: "", position: "", receiveDate: "", location: "" },
   });
+
+  const firstInputRef = useRef(null);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -59,15 +63,14 @@ const EmployeeAddReturn = ({ userName }) => {
         (!payload.secondReceivedBy.name ||
         !payload.secondReceivedBy.position ||
         !payload.secondReceivedBy.receiveDate ||
-        !payload.secondReceivedBy.location) 
-      )
+        !payload.secondReceivedBy.location))
     ) {
-      alert("Please fill out all required fields.");
+      alert("❌ Missing required fields. Please fill out all fields.");
       return;
     }
 
     try {
-      const response = await fetch("http://localhost:5000/add-receipt", {
+      const response = await fetch(`${API_BASE_URL}/add-receipt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -90,6 +93,7 @@ const EmployeeAddReturn = ({ userName }) => {
           receivedBy: { name: "", position: "", receiveDate: "", location: "" },
           secondReceivedBy: { name: "", position: "", receiveDate: "", location: "" },
         });
+        if (firstInputRef.current) firstInputRef.current.focus();
       } else {
         alert(`Error: ${data.error}`);
       }
@@ -108,7 +112,7 @@ const EmployeeAddReturn = ({ userName }) => {
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>RRSP No.</label>
-          <input type="text" name="rrspNo" value={form.rrspNo} onChange={handleChange} required />
+          <input ref={firstInputRef} type="text" name="rrspNo" value={form.rrspNo} onChange={handleChange} required />
         </div>
         <div className="form-group">
           <label>Date</label>

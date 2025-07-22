@@ -3,6 +3,9 @@ import axios from 'axios';
 import './EmployeePanel.css';
 import { useNavigate } from 'react-router-dom';  // ✅ Import useNavigate
 import EmployeeReceipts from "./EmployeeReceipts"; // ✅ Correct import
+import Modal from 'react-modal';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 const EmployeePanel = ({ userName }) => {
   const navigate = useNavigate();  // ✅ Define navigate using useNavigate()
@@ -11,10 +14,12 @@ const EmployeePanel = ({ userName }) => {
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('article');  // Sort by article
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profile, setProfile] = useState(null);
 
   // Fetch products assigned to the logged-in user
   const fetchProducts = () => {
-    axios.get(`http://localhost:5000/get-products/${userName}`)
+    axios.get(`${API_BASE_URL}/get-products/${userName}`)
       .then(res => {
         console.log('🟢 Fetched Products for:', userName, res.data); // ✅ Debugging
         setProducts(res.data);
@@ -25,6 +30,10 @@ const EmployeePanel = ({ userName }) => {
   useEffect(() => {
     if (userName) {
       fetchProducts();
+      // Fetch employee profile
+      axios.get(`${API_BASE_URL}/get-employee-profile/${userName}`)
+        .then(res => setProfile(res.data))
+        .catch(err => console.error('❌ Error fetching profile:', err));
     }
   }, [userName]);
 
@@ -34,6 +43,23 @@ const EmployeePanel = ({ userName }) => {
 
   const handleSortChange = (e) => {
     setSortOption(e.target.value);
+  };
+
+  const handleProfileChange = (e) => {
+    setProfile({ ...profile, [e.target.name]: e.target.value });
+  };
+
+  const handleProfileSubmit = (e) => {
+    e.preventDefault();
+    axios.put(`${API_BASE_URL}/edit-employee-profile/${profile.id}`, profile)
+      .then(() => {
+        alert('✅ Profile updated!');
+        setShowProfileModal(false);
+      })
+      .catch(err => {
+        alert('❌ Failed to update profile.');
+        console.error(err);
+      });
   };
 
   // Filtering and Sorting
@@ -58,6 +84,7 @@ const EmployeePanel = ({ userName }) => {
 
   return (
     <div className="employee-panel">
+      <button onClick={() => setShowProfileModal(true)} style={{ float: 'right', margin: '8px' }}>Edit Profile</button>
       <button onClick={() => setView(view === "articles" ? "receipts" : "articles")}>
         {view === "articles" ? "View Receipts" : "View Articles"}
       </button>
@@ -124,6 +151,31 @@ const EmployeePanel = ({ userName }) => {
       ) : (
         <EmployeeReceipts userName={userName} /> // ✅ Show Receipts Here
       )}
+
+      <Modal
+        isOpen={showProfileModal}
+        onRequestClose={() => setShowProfileModal(false)}
+        contentLabel="Edit Profile"
+        ariaHideApp={false}
+        className="profile-modal"
+        overlayClassName="profile-modal-overlay"
+      >
+        <h2>Edit Profile</h2>
+        {profile ? (
+          <form onSubmit={handleProfileSubmit} className="profile-form">
+            <input name="name" value={profile.name} onChange={handleProfileChange} placeholder="Name" required />
+            <input name="position" value={profile.position} onChange={handleProfileChange} placeholder="Position" />
+            <input name="department" value={profile.department} onChange={handleProfileChange} placeholder="Department" />
+            <input name="email" value={profile.email} onChange={handleProfileChange} placeholder="Email" />
+            <input name="contact_number" value={profile.contact_number} onChange={handleProfileChange} placeholder="Contact Number" />
+            <input name="address" value={profile.address} onChange={handleProfileChange} placeholder="Address" />
+            <button type="submit">Save</button>
+            <button type="button" onClick={() => setShowProfileModal(false)}>Cancel</button>
+          </form>
+        ) : (
+          <p>Loading...</p>
+        )}
+      </Modal>
     </div>
   );
 }

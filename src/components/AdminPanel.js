@@ -3,6 +3,8 @@ import axios from "axios";
 import "./AdminPanel.css";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 const AdminPanel = () => {
   const [product, setProduct] = useState({
     article: "",
@@ -23,21 +25,42 @@ const AdminPanel = () => {
   const [products, setProducts] = useState([]);
   const [users, setUsers] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [showUserForm, setShowUserForm] = useState(false);
+  const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [newUser, setNewUser] = useState({
     name: "",
-    role: "employee",
     password: "",
     confirmPassword: "",
+    role: "employee",
+    FK_employee: ""
   });
+  const [newEmployee, setNewEmployee] = useState({
+    name: "",
+    position: "",
+    department: "",
+    email: "",
+    contact_number: "",
+    address: "",
+  });
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editingEmployee, setEditingEmployee] = useState(null);
 
   const navigate = useNavigate();
 
+  const fetchEmployees = () => {
+    axios
+      .get(`${API_BASE_URL}/get-employees`)
+      .then((res) => setEmployees(res.data))
+      .catch((err) => console.error("❌ Error fetching employees:", err));
+  };
+
   const fetchUsers = () => {
     axios
-      .get("http://localhost:5000/get-users")
+      .get(`${API_BASE_URL}/get-users`)
       .then((res) => {
-        const filteredUsers = res.data.filter(user => user.role !== "admin");
+        const filteredUsers = res.data.filter((user) => user.role !== "admin");
         setUsers(filteredUsers);
       })
       .catch((err) => console.error("❌ Error fetching users:", err));
@@ -45,14 +68,14 @@ const AdminPanel = () => {
 
   const fetchProducts = useCallback(() => {
     axios
-      .get("http://localhost:5000/get-products/all")
+      .get(`${API_BASE_URL}/get-products/all`)
       .then((res) => setProducts(res.data))
       .catch((err) => console.error(err));
   }, []);
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/logs");
+      const res = await fetch(`${API_BASE_URL}/api/logs`);
       if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
       const data = await res.json();
       setLogs(data);
@@ -62,9 +85,25 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
-    fetchProducts();
-  }, []);
+    const fetchAllData = async () => {
+      try {
+        await Promise.all([
+          fetchEmployees(),
+          fetchUsers(),
+          fetchProducts()
+        ]);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchAllData();
+    
+    // Set up periodic refresh
+    const refreshInterval = setInterval(fetchAllData, 5000); // Refresh every 5 seconds
+    
+    return () => clearInterval(refreshInterval);
+  }, [fetchProducts]);
 
   useEffect(() => {
     fetchLogs();
@@ -88,6 +127,10 @@ const AdminPanel = () => {
     setNewUser({ ...newUser, [e.target.name]: e.target.value });
   };
 
+  const handleEmployeeChange = (e) => {
+    setNewEmployee({ ...newEmployee, [e.target.name]: e.target.value });
+  };
+
   const handleProductSubmit = (e) => {
     e.preventDefault();
     const cleanTotalAmount = parseFloat(product.total_amount.replace(/[₱,]/g, "")) || 0;
@@ -95,11 +138,11 @@ const AdminPanel = () => {
       ...product,
       userName: "Administrator", // Assuming admin user is adding the product
       date_acquired: product.date_acquired || null,
-      total_amount: cleanTotalAmount
+      total_amount: cleanTotalAmount,
     };
 
     axios
-      .post("http://localhost:5000/add-product", productData)
+      .post(`${API_BASE_URL}/add-product`, productData)
       .then((res) => {
         alert("✅ Article Added!");
         setProducts((prev) => [...prev, productData]);
@@ -127,7 +170,7 @@ const AdminPanel = () => {
   const handleDeleteUser = (userId) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       axios
-        .delete(`http://localhost:5000/delete-user/${userId}`)
+        .delete(`${API_BASE_URL}/delete-user/${userId}`)
         .then(() => {
           alert("✅ User deleted successfully!");
           fetchUsers();
@@ -139,32 +182,128 @@ const AdminPanel = () => {
     }
   };
 
-  const handleAddUser = (e) => {
+  const handleAddUser = async (e) => {
     e.preventDefault();
-  
+
     if (newUser.password !== newUser.confirmPassword) {
       alert("❌ Passwords do not match!");
       return;
     }
-  
-    const userData = {
-      name: newUser.name,
-      password: newUser.password,
-      role: newUser.role,
-    };
-  
-    axios
-      .post("http://localhost:5000/add-user", userData)
+
+    // Remove confirmPassword before sending to server
+    const { confirmPassword, ...userData } = newUser;
+
+    await axios.post(`${API_BASE_URL}/add-user`, userData)
       .then(() => {
         alert("✅ User Added!");
         setShowUserForm(false);
         fetchUsers();
-        setNewUser({ name: "", role: "employee", password: "", confirmPassword: "" });
+        setNewUser({ name: "", password: "", confirmPassword: "", role: "employee", FK_employee: "" });
       })
       .catch((err) => {
         console.error("❌ Error adding user:", err.response?.data || err.message);
         alert("❌ Failed to add user. Check console for errors.");
       });
+  };
+
+  const handleAddEmployee = (e) => {
+    e.preventDefault();
+    fetch(`${API_BASE_URL}/add-employee`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newEmployee),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        alert("✅ Employee added successfully!");
+        setShowEmployeeForm(false);
+        setNewEmployee({ name: "", position: "", department: "", email: "", contact_number: "", address: "" });
+        fetchEmployees();
+      })
+      .catch((err) => {
+        console.error("❌ Error adding employee:", err);
+        alert("Failed to add employee: " + err.message);
+      });
+  };
+
+  // Handle edit button click
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+  };
+
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+  };
+
+  const handleEditEmployee = (employee) => {
+    setEditingEmployee(employee);
+  };
+
+  // Handle edit form change
+  const handleEditProductChange = (e) => {
+    setEditingProduct({ ...editingProduct, [e.target.name]: e.target.value });
+  };
+
+  const handleEditUserChange = (e) => {
+    setEditingUser({ ...editingUser, [e.target.name]: e.target.value });
+  };
+
+  const handleEditEmployeeChange = (e) => {
+    setEditingEmployee({ ...editingEmployee, [e.target.name]: e.target.value });
+  };
+
+  // Handle edit form submit
+  const handleEditProductSubmit = (e) => {
+    e.preventDefault();
+    axios
+      .put(`${API_BASE_URL}/edit-product/${editingProduct.id}`, editingProduct)
+      .then(() => {
+        alert("✅ Article updated!");
+        setEditingProduct(null);
+        fetchProducts();
+      })
+      .catch((err) => {
+        console.error("❌ Error updating product:", err.response?.data || err.message);
+        alert("❌ Error updating product! Check console.");
+      });
+  };
+
+  const handleEditUserSubmit = (e) => {
+    e.preventDefault();
+    fetch(`${API_BASE_URL}/edit-user/${editingUser.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingUser),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        setEditingUser(null);
+        fetchUsers();
+      });
+  };
+
+  const handleEditEmployeeSubmit = (e) => {
+    e.preventDefault();
+    fetch(`${API_BASE_URL}/edit-employee/${editingEmployee.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingEmployee),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        setEditingEmployee(null);
+        fetchEmployees();
+      });
+  };
+
+  const handleDeleteEmployee = (id) => {
+    if (!window.confirm("Delete this employee?")) return;
+    fetch(`${API_BASE_URL}/delete-employee/${id}`, { method: "DELETE" })
+      .then((res) => res.json())
+      .then(fetchEmployees);
   };
 
   return (
@@ -218,38 +357,89 @@ const AdminPanel = () => {
         <div className="popup-form">
           <h3>Add New User</h3>
           <form onSubmit={handleAddUser}>
-  <input
-    type="text"
-    name="name"
-    placeholder="User Name"
-    value={newUser.name}
-    onChange={handleUserChange}
-    required
-  />
-  <input
-    type="password"
-    name="password"
-    placeholder="Password"
-    value={newUser.password}
-    onChange={handleUserChange}
-    required
-  />
-  <input
-    type="password"
-    name="confirmPassword"
-    placeholder="Confirm Password"
-    value={newUser.confirmPassword}
-    onChange={handleUserChange}
-    required
-  />
-  <select name="role" value={newUser.role} onChange={handleUserChange} required>
-    <option value="admin">Administrator</option>
-    <option value="employee">Instructor</option>
-    <option value="supervisor">Admin</option>
-  </select>
-  <button type="submit">Save User</button>
-  <button type="button" onClick={() => setShowUserForm(false)}>Cancel</button>
-</form>
+            <input
+              type="text"
+              name="name"
+              placeholder="User Name"
+              value={newUser.name}
+              onChange={handleUserChange}
+              required
+            />
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={newUser.password}
+              onChange={handleUserChange}
+              required
+            />
+            <input
+              type="password"
+              name="confirmPassword"
+              placeholder="Confirm Password"
+              value={newUser.confirmPassword}
+              onChange={handleUserChange}
+              required
+            />
+            <select name="role" value={newUser.role} onChange={handleUserChange} required>
+              <option value="admin">Administrator</option>
+              <option value="employee">Instructor</option>
+              <option value="supervisor">Admin</option>
+            </select>
+            {newUser.role === 'employee' && (
+              <select
+                name="FK_employee"
+                value={newUser.FK_employee}
+                onChange={handleUserChange}
+                required={newUser.role === 'employee'}
+                className="employee-dropdown"
+              >
+                <option value="">Select Employee</option>
+                {Array.isArray(employees) && employees.map(emp => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name} ({emp.position || 'No Position'})
+                  </option>
+                ))}
+              </select>
+            )}
+            <button type="submit">Save User</button>
+            <button type="button" onClick={() => setShowUserForm(false)}>
+              Cancel
+            </button>
+          </form>
+        </div>
+      )}
+
+      {showEmployeeForm && (
+        <div className="popup-form">
+          <h3>Add Employee</h3>
+          <form onSubmit={handleAddEmployee}>
+            <input name="name" placeholder="Name" value={newEmployee.name} onChange={handleEmployeeChange} required />
+            <input name="position" placeholder="Position" value={newEmployee.position} onChange={handleEmployeeChange} />
+            <input name="department" placeholder="Department" value={newEmployee.department} onChange={handleEmployeeChange} />
+            <input name="email" placeholder="Email" value={newEmployee.email} onChange={handleEmployeeChange} />
+            <input name="contact_number" placeholder="Contact Number" value={newEmployee.contact_number} onChange={handleEmployeeChange} />
+            <input name="address" placeholder="Address" value={newEmployee.address} onChange={handleEmployeeChange} />
+            <button type="submit">Save Employee</button>
+            <button type="button" onClick={() => setShowEmployeeForm(false)}>
+              Cancel
+            </button>
+          </form>
+          {/* Show generated Employee ID after adding (if available) */}
+          {newEmployee.employee_id && (
+            <div className="employee-id-display">
+              <strong>Employee ID:</strong> {newEmployee.employee_id}
+              <button
+                style={{ marginLeft: 4, fontSize: 12 }}
+                onClick={() => {
+                  navigator.clipboard.writeText(newEmployee.employee_id);
+                  alert("Copied: " + newEmployee.employee_id);
+                }}
+              >
+                Copy
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -268,10 +458,60 @@ const AdminPanel = () => {
               <td>{user.name}</td>
               <td>{user.role}</td>
               <td>
+                <button className="edit-btn" onClick={() => setEditingUser(user)}>✏️ Edit</button>
                 <button className="delete-btn" onClick={() => handleDeleteUser(user.id)}>🗑 Delete</button>
               </td>
             </tr>
           ))}
+        </tbody>
+      </table>
+
+      <h3>Employees</h3>
+      <button onClick={() => setShowEmployeeForm(true)} style={{ marginBottom: "12px" }}>+ Add Employee</button>
+      <table>
+        <thead>
+          <tr>
+            <th>Employee ID</th>
+            <th>Name</th>
+            <th>Position</th>
+            <th>Department</th>
+            <th>Email</th>
+            <th>Contact</th>
+            <th>Address</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Array.isArray(employees) && employees.length > 0 ? (
+            employees.map(emp => (
+              <tr key={emp.id}>
+                <td>
+                  {emp.employee_id || "-"}
+                  {emp.employee_id && (
+                  <button
+                    style={{ marginLeft: 4, fontSize: 12 }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(emp.employee_id);
+                      alert("Copied: " + emp.employee_id);
+                    }}
+                  >
+                    Copy
+                  </button>
+                )}
+              </td>
+              <td>{emp.name}</td>
+              <td>{emp.position}</td>
+              <td>{emp.department}</td>
+              <td>{emp.email}</td>
+              <td>{emp.contact_number}</td>
+              <td>{emp.address}</td>
+              <td>
+                <button onClick={() => handleEditEmployee(emp)}>✏️ Edit</button>
+                <button onClick={() => handleDeleteEmployee(emp.id)}>🗑 Delete</button>
+              </td>
+            </tr>
+          ))
+          ) : null}
         </tbody>
       </table>
 
@@ -285,7 +525,7 @@ const AdminPanel = () => {
           className="export-btn pdf"
           onClick={() =>
             window.open(
-              `http://localhost:5000/export-products/pdf?startDate=${startDate}&endDate=${endDate}`,
+              `${API_BASE_URL}/export-products/pdf?startDate=${startDate}&endDate=${endDate}`,
               "_blank"
             )
           }
@@ -296,7 +536,7 @@ const AdminPanel = () => {
           className="export-btn excel"
           onClick={() =>
             window.open(
-              `http://localhost:5000/export-products/excel?startDate=${startDate}&endDate=${endDate}`,
+              `${API_BASE_URL}/export-products/excel?startDate=${startDate}&endDate=${endDate}`,
               "_blank"
             )
           }
@@ -304,6 +544,172 @@ const AdminPanel = () => {
           📊 Export as Excel
         </button>
       </div>
+
+      <h3>Articles</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Article</th>
+            <th>Description</th>
+            <th>Unit</th>
+            <th>Unit Value</th>
+            <th>Balance</th>
+            <th>On Hand</th>
+            <th>Total Amount</th>
+            <th>User</th>
+            <th>Remarks</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((prod) => (
+            <tr key={prod.id}>
+              <td>{prod.article}</td>
+              <td>{prod.description}</td>
+              <td>{prod.unit}</td>
+              <td>{prod.unit_value}</td>
+              <td>{prod.balance_per_card}</td>
+              <td>{prod.on_hand_per_count}</td>
+              <td>{prod.total_amount}</td>
+              <td>{prod.actual_user || prod.userName}</td>
+              <td>{prod.remarks}</td>
+              <td>
+                <button onClick={() => handleEditProduct(prod)}>✏️ Edit</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Edit popup form */}
+      {editingProduct && (
+        <div className="popup-form">
+          <h3>Edit Article</h3>
+          <form onSubmit={handleEditProductSubmit}>
+            <input
+              type="text"
+              name="article"
+              value={editingProduct.article}
+              onChange={handleEditProductChange}
+              required
+            />
+            <textarea
+              name="description"
+              value={editingProduct.description}
+              onChange={handleEditProductChange}
+            />
+            <input
+              type="text"
+              name="unit"
+              value={editingProduct.unit}
+              onChange={handleEditProductChange}
+            />
+            <input
+              type="number"
+              name="unit_value"
+              value={editingProduct.unit_value}
+              onChange={handleEditProductChange}
+            />
+            <input
+              type="number"
+              name="balance_per_card"
+              value={editingProduct.balance_per_card}
+              onChange={handleEditProductChange}
+            />
+            <input
+              type="number"
+              name="on_hand_per_count"
+              value={editingProduct.on_hand_per_count}
+              onChange={handleEditProductChange}
+            />
+            <input
+              type="number"
+              name="total_amount"
+              value={editingProduct.total_amount}
+              onChange={handleEditProductChange}
+            />
+            <textarea
+              name="remarks"
+              value={editingProduct.remarks}
+              onChange={handleEditProductChange}
+            />
+            <button type="submit">Save</button>
+            <button type="button" onClick={() => setEditingProduct(null)}>
+              Cancel
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Edit user popup form */}
+      {editingUser && (
+        <div className="popup-form">
+          <h3>Edit User</h3>
+          <form onSubmit={handleEditUserSubmit}>
+            <input
+              type="text"
+              name="name"
+              value={editingUser.name}
+              onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+              required
+            />
+            <select
+              name="role"
+              value={editingUser.role}
+              onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+              required
+            >
+              <option value="admin">Administrator</option>
+              <option value="employee">Instructor</option>
+              <option value="supervisor">Admin</option>
+            </select>
+            <button type="submit">Save</button>
+            <button type="button" onClick={() => setEditingUser(null)}>Cancel</button>
+          </form>
+        </div>
+      )}
+
+      {/* Edit employee popup form */}
+      {editingEmployee && (
+        <div className="popup-form">
+          <h3>Edit Employee</h3>
+          <form onSubmit={handleEditEmployeeSubmit}>
+            <input
+              name="name"
+              value={editingEmployee.name}
+              onChange={handleEditEmployeeChange}
+              required
+            />
+            <input
+              name="position"
+              value={editingEmployee.position}
+              onChange={handleEditEmployeeChange}
+            />
+            <input
+              name="department"
+              value={editingEmployee.department}
+              onChange={handleEditEmployeeChange}
+            />
+            <input
+              name="email"
+              value={editingEmployee.email}
+              onChange={handleEditEmployeeChange}
+            />
+            <input
+              name="contact_number"
+              value={editingEmployee.contact_number}
+              onChange={handleEditEmployeeChange}
+            />
+            <input
+              name="address"
+              value={editingEmployee.address}
+              onChange={handleEditEmployeeChange}
+            />
+            <button type="submit">Save</button>
+            <button type="button" onClick={() => setEditingEmployee(null)}>Cancel</button>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

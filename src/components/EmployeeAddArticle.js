@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
 import "./EmployeeAddArticle.css"; // ✅ Make sure to style accordingly
+
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 const EmployeeAddArticle = ({ userName }) => {
   const [form, setForm] = useState({
@@ -16,6 +18,8 @@ const EmployeeAddArticle = ({ userName }) => {
     total_amount: "",
     remarks: "",
   });
+
+  const firstInputRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -42,7 +46,7 @@ const EmployeeAddArticle = ({ userName }) => {
     const dataToSend = { ...form, userName };
 
     try {
-      const response = await axios.post("http://localhost:5000/add-product", dataToSend);
+      const response = await axios.post(`${API_BASE_URL}/add-product`, dataToSend);
       alert("✅ Article added successfully!");
       setForm({
         article: "",
@@ -56,6 +60,7 @@ const EmployeeAddArticle = ({ userName }) => {
         total_amount: "",
         remarks: "",
       });
+      if (firstInputRef.current) firstInputRef.current.focus();
     } catch (error) {
       console.error("❌ Error adding article:", error.response?.data || error.message);
       alert("❌ Failed to add article.");
@@ -70,7 +75,7 @@ const EmployeeAddArticle = ({ userName }) => {
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Article</label>
-          <input type="text" name="article" value={form.article} onChange={handleChange} required />
+          <input ref={firstInputRef} type="text" name="article" value={form.article} onChange={handleChange} required />
         </div>
         <div className="form-group">
           <label>Description</label>
