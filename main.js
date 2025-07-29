@@ -130,8 +130,7 @@ async function createWindow() {
       }
     });
 
-    // In development, we use React's dev server
-    // In production, we serve the static files from the backend
+
 const startURL = isDev
       ? "http://localhost:3000"
       : "http://localhost:5000";

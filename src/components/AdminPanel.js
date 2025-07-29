@@ -32,8 +32,7 @@ const AdminPanel = () => {
     name: "",
     password: "",
     confirmPassword: "",
-    role: "employee",
-    FK_employee: ""
+    role: "supervisor"  // Always supervisor
   });
   const [newEmployee, setNewEmployee] = useState({
     name: "",
@@ -52,25 +51,43 @@ const AdminPanel = () => {
   const fetchEmployees = () => {
     axios
       .get(`${API_BASE_URL}/get-employees`)
-      .then((res) => setEmployees(res.data))
-      .catch((err) => console.error("❌ Error fetching employees:", err));
+      .then((res) => {
+        // Ensure we always set an array, even if empty
+        setEmployees(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch((err) => {
+        console.error("❌ Error fetching employees:", err);
+        setEmployees([]); // Set empty array on error
+      });
   };
 
   const fetchUsers = () => {
     axios
       .get(`${API_BASE_URL}/get-users`)
       .then((res) => {
-        const filteredUsers = res.data.filter((user) => user.role !== "admin");
-        setUsers(filteredUsers);
+        if (Array.isArray(res.data)) {
+          const filteredUsers = res.data.filter((user) => user.role !== "admin");
+          setUsers(filteredUsers);
+        } else {
+          setUsers([]);
+        }
       })
-      .catch((err) => console.error("❌ Error fetching users:", err));
+      .catch((err) => {
+        console.error("❌ Error fetching users:", err);
+        setUsers([]); // Set empty array on error
+      });
   };
 
   const fetchProducts = useCallback(() => {
     axios
       .get(`${API_BASE_URL}/get-products/all`)
-      .then((res) => setProducts(res.data))
-      .catch((err) => console.error(err));
+      .then((res) => {
+        setProducts(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch((err) => {
+        console.error("❌ Error fetching products:", err);
+        setProducts([]); // Set empty array on error
+      });
   }, []);
 
   const fetchLogs = async () => {
@@ -337,21 +354,25 @@ const AdminPanel = () => {
 
         <div className="user-select">
           <select name="actual_user" value={product.actual_user} onChange={handleChange} required>
-            <option value="">Select Actual User</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.name}>
-                {user.name}
+            <option value="">Select Employee</option>
+            {employees.map((emp) => (
+              <option key={emp.id} value={emp.name}>
+                {emp.name} ({emp.position || 'No Position'})
               </option>
             ))}
           </select>
-          <button type="button" className="add-user-btn" onClick={() => setShowUserForm(true)}>
-            + Add User
-          </button>
         </div>
 
         <textarea name="remarks" placeholder="Remarks" value={product.remarks} onChange={handleChange} />
         <button type="submit">Add Article</button>
       </form>
+
+      <div className="add-supervisor-section">
+        <h3>Add Supervisor/Admin</h3>
+        <button type="button" className="add-supervisor-btn" onClick={() => setShowUserForm(true)}>
+          + Add Supervisor/Admin
+        </button>
+      </div>
 
       {showUserForm && (
         <div className="popup-form">
@@ -381,27 +402,7 @@ const AdminPanel = () => {
               onChange={handleUserChange}
               required
             />
-            <select name="role" value={newUser.role} onChange={handleUserChange} required>
-              <option value="admin">Administrator</option>
-              <option value="employee">Instructor</option>
-              <option value="supervisor">Admin</option>
-            </select>
-            {newUser.role === 'employee' && (
-              <select
-                name="FK_employee"
-                value={newUser.FK_employee}
-                onChange={handleUserChange}
-                required={newUser.role === 'employee'}
-                className="employee-dropdown"
-              >
-                <option value="">Select Employee</option>
-                {Array.isArray(employees) && employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name} ({emp.position || 'No Position'})
-                  </option>
-                ))}
-              </select>
-            )}
+            <input type="hidden" name="role" value="supervisor" />
             <button type="submit">Save User</button>
             <button type="button" onClick={() => setShowUserForm(false)}>
               Cancel

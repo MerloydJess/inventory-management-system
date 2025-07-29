@@ -1,62 +1,352 @@
-const express = require("express");
+  require("dotenv").config();
+  const express = require("express");
   const sqlite3 = require("sqlite3").verbose(); // ✅ Using SQLite3
   const cors = require("cors");
   const bcrypt = require("bcryptjs");
   const path = require("path");
   const fs = require("fs");
+  
+  // Simple in-memory cache implementation
+  const cache = {
+    data: new Map(),
+    timeout: new Map(),
+    
+    set: function(key, value, ttl = 60000) { // Default TTL: 60 seconds
+      if (this.timeout.has(key)) {
+        clearTimeout(this.timeout.get(key));
+      }
+      
+      this.data.set(key, value);
+      this.timeout.set(key, setTimeout(() => {
+        this.data.delete(key);
+        this.timeout.delete(key);
+      }, ttl));
+    },
+    
+    get: function(key) {
+      return this.data.get(key);
+    },
+    
+    has: function(key) {
+      return this.data.has(key);
+    },
+    
+    invalidate: function(pattern) {
+      for (let key of this.data.keys()) {
+        if (key.includes(pattern)) {
+          this.data.delete(key);
+          if (this.timeout.has(key)) {
+            clearTimeout(this.timeout.get(key));
+            this.timeout.delete(key);
+          }
+        }
+      }
+    }
+  };
+  
+  // Cache middleware
+  const cacheMiddleware = (ttl) => (req, res, next) => {
+    const key = `${req.method}:${req.url}`;
+    
+    if (req.method === 'GET' && cache.has(key)) {
+      return res.json(cache.get(key));
+    }
+    
+    const originalJson = res.json;
+    res.json = function(data) {
+      if (req.method === 'GET') {
+        cache.set(key, data, ttl);
+      }
+      originalJson.call(this, data);
+    };
+    
+    next();
+  };
   const server = express();
   const PDFDocument = require("pdfkit");
   const ExcelJS = require("exceljs");
   const isPackaged = require("electron-is-packaged").isPackaged || process.mainModule?.filename.indexOf('app.asar') !== -1;
   const PORT = process.env.PORT || 5000;
-  const isDev = !isPackaged;
+  const isDev = process.env.NODE_ENV !== "production";
   process.env.NODE_ENV = isDev ? "development" : "production";
+  
 
-  // ✅ Enable CORS in development mode
-  if (isDev) {
-    server.use(cors({ origin: "http://localhost:3000" }));
-  }
+  // Logging middleware
+  const logRequest = (req, res, next) => {
+    const start = Date.now();
+    const requestId = Math.random().toString(36).substring(7);
+    
+    // Log request
+    console.log(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      requestId,
+      method: req.method,
+      url: req.url,
+      ip: req.ip,
+      userAgent: req.get('user-agent')
+    }));
 
-  server.use(express.json());
+    // Log response
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      console.log(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        requestId,
+        method: req.method,
+        url: req.url,
+        status: res.statusCode,
+        duration: `${duration}ms`
+      }));
+    });
+
+    next();
+  };
+
+  // Audit logging middleware for sensitive operations
+  const auditLog = (action) => (req, res, next) => {
+    const originalSend = res.json;
+    res.json = function(data) {
+      db.run(
+        `INSERT INTO activity_logs (action, user_id, details) VALUES (?, ?, ?)`,
+        [
+          action,
+          req.user?.id || null,
+          JSON.stringify({
+            method: req.method,
+            url: req.url,
+            body: req.body,
+            result: data
+          })
+        ]
+      );
+      originalSend.call(this, data);
+    };
+    next();
+  };
+
+  // ✅ Enable CORS and configure limits
+  server.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }));
+  
+  // Add logging middleware
+  server.use(logRequest);
+  
+  // Configure express limits for larger requests
+  server.use(express.json({limit: '50mb'}));
+  server.use(express.urlencoded({limit: '50mb', extended: true}));
   
   // 🚀 Connect to SQLite Database (Creates file if not exists)
 
- function getDatabasePath() {
-  if (isPackaged) {
-    // For packaged app, use userData directory
-    const { app } = require('electron');
-    const userDataPath = app.getPath('userData');
-    const dbDir = path.join(userDataPath, 'data');
-    
-    // Ensure directory exists
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
-    }
-    
-    return path.join(dbDir, 'database.sqlite');
+function getDatabasePath() {
+  if (isDev) {
+    const devDir = path.join(__dirname, "resources");
+    if (!fs.existsSync(devDir)) fs.mkdirSync(devDir, { recursive: true });
+    return path.join(devDir, "database.sqlite");
   } else {
-    // For development, use local directory
-    const dbDir = path.join(__dirname, "resources");
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
-    }
-    return path.join(dbDir, "database.sqlite");
+    const prodDir = path.join(process.cwd(), "data");
+    if (!fs.existsSync(prodDir)) fs.mkdirSync(prodDir, { recursive: true });
+    return path.join(prodDir, "database.sqlite");
   }
 }
 
 const dbPath = getDatabasePath();
-
-const db = new sqlite3.Database(dbPath, (err) => {
+// Enable WAL mode for better concurrency
+const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
   if (err) {
     console.error("❌ Error opening database:", err.message);
-  } else {
-    console.log(`✅ Connected to SQLite database at ${dbPath}`);
+    process.exit(1);
+  }
+  
+  // Enable WAL mode and foreign keys
+  db.serialize(() => {
+    db.run("PRAGMA journal_mode = WAL");
+    db.run("PRAGMA foreign_keys = ON");
+    db.run("PRAGMA busy_timeout = 6000");
+    console.log(`✅ Connected to database at ${dbPath}`);
     
+    // Initialize database and start server after database is ready
     createTables(() => {
       insertSampleData();
+      
+      // Start Express Server after database is ready
+      const serverPort = isDev ? 5000 : PORT;
+      server.listen(serverPort, () => {
+        console.log(`🚀 Express server running on port ${serverPort}`);
+      });
     });
+  });
+});
 
+// Helper function for running queries in a transaction
+const runInTransaction = async (queries) => {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run("BEGIN TRANSACTION");
+      
+      try {
+        queries.forEach(query => {
+          if (Array.isArray(query.params)) {
+            db.run(query.sql, query.params);
+          } else {
+            db.run(query.sql);
+          }
+        });
+        
+        db.run("COMMIT", (err) => {
+          if (err) {
+            console.error("❌ Transaction failed:", err);
+            db.run("ROLLBACK");
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      } catch (err) {
+        console.error("❌ Transaction error:", err);
+        db.run("ROLLBACK");
+        reject(err);
+      }
+    });
+  });
+};
+  
+// API Routes and other middleware configurations follow here...
+
+// API Routes
+server.get('/get-products/all', async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const search = req.query.search || '';
+  const sortBy = req.query.sortBy || 'date_acquired';
+  const sortOrder = req.query.sortOrder === 'asc' ? 'ASC' : 'DESC';
+  const offset = (page - 1) * limit;
+
+  try {
+    // Get total count with search
+    const countQuery = `
+      SELECT COUNT(*) as total 
+      FROM products 
+      WHERE article LIKE ? OR description LIKE ?
+    `;
+    const searchParam = `%${search}%`;
+    
+    db.get(countQuery, [searchParam, searchParam], (countErr, { total }) => {
+      if (countErr) {
+        console.error("❌ Error counting products:", countErr);
+        return res.status(500).json({ error: "Database error", details: countErr.message });
+      }
+
+      // Get paginated and filtered results
+      const query = `
+        SELECT p.*, e.name as employee_name
+        FROM products p
+        LEFT JOIN employee e ON p.FK_employee = e.id
+        WHERE p.article LIKE ? OR p.description LIKE ?
+        ORDER BY p.${sortBy} ${sortOrder}
+        LIMIT ? OFFSET ?
+      `;
+
+      db.all(query, [searchParam, searchParam, limit, offset], (err, products) => {
+        if (err) {
+          console.error("❌ Error fetching products:", err);
+          return res.status(500).json({ error: "Database error", details: err.message });
+        }
+
+        // Send paginated response
+        res.json({
+          total,
+          page,
+          totalPages: Math.ceil(total / limit),
+          products: products || [],
+          hasMore: offset + products.length < total
+        });
+      });
+    });
+  } catch (err) {
+    console.error("❌ Error in get-products:", err);
+    res.status(500).json({ error: "Server error", details: err.message });
   }
+});
+
+server.get('/get-employees', (req, res) => {
+  db.all('SELECT * FROM employee', [], (err, rows) => {
+    if (err) {
+      console.error("❌ Error fetching employees:", err);
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(rows || []);
+  });
+});
+
+server.get('/get-users', (req, res) => {
+  db.all('SELECT * FROM users', [], (err, rows) => {
+    if (err) {
+      console.error("❌ Error fetching users:", err);
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(rows || []);
+  });
+});
+
+// Employee Login endpoint
+server.post('/employee-login', (req, res) => {
+  const { employeeId } = req.body;
+  if (!employeeId) {
+    return res.status(400).json({ error: "Employee ID is required" });
+  }
+
+  db.get(
+    `SELECT e.*, u.role 
+     FROM employee e 
+     LEFT JOIN users u ON e.id = u.FK_employee 
+     WHERE e.employee_id = ?`,
+    [employeeId],
+    (err, employee) => {
+      if (err) {
+        console.error("❌ Error during employee login:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      
+      if (!employee) {
+        return res.status(401).json({ error: "Invalid Employee ID" });
+      }
+
+      // If no user account exists for this employee, create one
+      if (!employee.role) {
+        const createUserQuery = `
+          INSERT INTO users (name, role, password, FK_employee)
+          VALUES (?, 'employee', '', ?)
+        `;
+        
+        db.run(createUserQuery, [employee.name, employee.id], function(err) {
+          if (err) {
+            console.error("❌ Error creating user account for employee:", err);
+            return res.status(500).json({ error: "Error creating user account" });
+          }
+          
+          // Successfully created user account
+          res.json({
+            role: "employee",
+            name: employee.name,
+            employeeId: employee.employee_id
+          });
+        });
+      } else {
+        // User account already exists
+        res.json({
+          role: "employee",
+          name: employee.name,
+          employeeId: employee.employee_id
+        });
+      }
+    }
+  );
 });
 
 // FIND YOUR EXISTING createTables FUNCTION (around line 35-90) AND REPLACE IT WITH THIS:
@@ -73,7 +363,7 @@ const createTables = (callback) => {
 
     // Track how many async table creations are complete
     let completed = 0;
-    const total = 4; // Updated to 4 tables
+    const total = 5; // Updated to 5 tables (including activity_logs)
 
     const checkDone = () => {
       completed += 1;
@@ -146,6 +436,23 @@ const createTables = (callback) => {
       }
     );
 
+    // Activity Logs table
+    db.run(
+      `CREATE TABLE IF NOT EXISTS activity_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL,
+        user_id INTEGER,
+        details TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      )`,
+      (err) => {
+        if (err) console.error("❌ Error creating 'activity_logs' table:", err.message);
+        else console.log("✅ 'activity_logs' table ready!");
+        checkDone();
+      }
+    );
+
     // Returns table with all columns
     db.run(
       `CREATE TABLE IF NOT EXISTS returns (
@@ -197,37 +504,73 @@ function addMissingColumns(callback) {
   let completed = 0;
   const total = columnsToAdd.length;
 
-  const checkDone = () => {
+  function checkDone() {
     completed += 1;
     if (completed === total) {
       console.log("✅ All missing columns checked/added.");
+      // Add test employee after columns are added
+      addTestEmployee(() => {
+        if (callback) callback();
+      });
+    }
+  }
+
+  // Process each column
+  columnsToAdd.forEach(({ table, column, type }) => {
+    db.get(
+      `SELECT COUNT(*) as count FROM pragma_table_info('${table}') WHERE name='${column}'`,
+      [],
+      (err, result) => {
+        if (err) {
+          console.error(`❌ Error checking column ${column}:`, err.message);
+          checkDone();
+          return;
+        }
+
+        if (result.count === 0) {
+          db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`, (err) => {
+            if (err) {
+              console.error(`❌ Error adding column ${column}:`, err.message);
+            } else {
+              console.log(`✅ Added ${column} to ${table}`);
+            }
+            checkDone();
+          });
+        } else {
+          console.log(`✅ Column ${column} already exists in ${table}`);
+          checkDone();
+        }
+      }
+    );
+  });
+}
+
+// Function to add test employee
+function addTestEmployee(callback) {
+  db.get("SELECT * FROM employee WHERE employee_id = 'EMP001'", [], (err, row) => {
+    if (err) {
+      console.error("❌ Error checking for test employee:", err.message);
+      if (callback) callback();
+      return;
+    }
+
+    if (!row) {
+      db.run(
+        `INSERT INTO employee (name, position, department, email, contact_number, address, employee_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        ['John Doe', 'Staff', 'IT', 'john@example.com', '123456789', 'Manila', 'EMP001'],
+        (err) => {
+          if (err) {
+            console.error("❌ Error creating test employee:", err.message);
+          } else {
+            console.log("✅ Test employee created (ID: EMP001)");
+          }
+          if (callback) callback();
+        }
+      );
+    } else {
       if (callback) callback();
     }
-  };
-
-  columnsToAdd.forEach(({ table, column, type }) => {
-    db.all(`PRAGMA table_info(${table})`, (err, columns) => {
-      if (err) {
-        console.error(`❌ Error fetching columns for ${table}:`, err.message);
-        checkDone();
-        return;
-      }
-
-      const exists = columns.some(col => col.name === column);
-      if (!exists) {
-        db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`, (err) => {
-          if (err) {
-            console.error(`❌ Error adding column ${column} to ${table}:`, err.message);
-          } else {
-            console.log(`✅ Added column ${column} to ${table}`);
-          }
-          checkDone();
-        });
-      } else {
-        console.log(`✅ Column ${column} already exists in ${table}`);
-        checkDone();
-      }
-    });
   });
 }
 
@@ -311,53 +654,99 @@ server.post("/login", (req, res) => {
 
   // 🚀 Register User
   server.post("/add-user", async (req, res) => {
-    const { name, role, password, FK_employee, employeeData } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
+    try {
+      const { name, role, password, FK_employee, employeeData } = req.body;
+      
+      if (!name || !role || !password) {
+        return res.status(400).json({ error: "Name, role, and password are required" });
+      }
 
-    function insertUser(empId) {
-      db.run(
-        `INSERT INTO users (name, role, password, FK_employee) VALUES (?, ?, ?, ?)`,
-        [name, role, hashedPassword, empId],
-        function (err) {
-          if (err) {
-            console.error("❌ Error adding user:", err.message);
-            return res.status(500).json({ error: "Database error", details: err.message });
-          }
-          res.status(200).json({ message: "✅ User added successfully" });
-        }
-      );
-    }
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (FK_employee) {
-      // Employee selected from dropdown
-      insertUser(FK_employee);
-    } else if (employeeData && employeeData.name) {
-      // Auto-create employee if not found
-      db.run(
-        `INSERT INTO employee (name, position, department, email, contact_number, address) VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          employeeData.name,
-          employeeData.position || "",
-          employeeData.department || "",
-          employeeData.email || "",
-          employeeData.contact_number || "",
-          employeeData.address || ""
-        ],
-        function (err) {
-          if (err) {
-            console.error("❌ Error creating employee:", err.message);
-            return res.status(500).json({ error: "Database error", details: err.message });
+      // For supervisor/admin users, we don't need employee data
+      if (role === 'supervisor' || role === 'admin') {
+        db.run(
+          `INSERT INTO users (name, role, password) VALUES (?, ?, ?)`,
+          [name, role, hashedPassword],
+          function (err) {
+            if (err) {
+              console.error("❌ Error adding supervisor/admin:", err.message);
+              return res.status(500).json({ error: "Database error", details: err.message });
+            }
+            res.status(200).json({ 
+              message: "✅ User added successfully",
+              userId: this.lastID 
+            });
           }
-          insertUser(this.lastID);
-        }
-      );
-    } else {
-      return res.status(400).json({ error: "No employee selected or provided." });
+        );
+        return;
+      }
+
+      // For employee users
+      if (FK_employee) {
+        db.run(
+          `INSERT INTO users (name, role, password, FK_employee) VALUES (?, ?, ?, ?)`,
+          [name, role, hashedPassword, FK_employee],
+          function (err) {
+            if (err) {
+              console.error("❌ Error adding user:", err.message);
+              return res.status(500).json({ error: "Database error", details: err.message });
+            }
+            res.status(200).json({ 
+              message: "✅ User added successfully",
+              userId: this.lastID 
+            });
+          }
+        );
+      } else if (employeeData && employeeData.name) {
+        // Create new employee first
+        db.run(
+          `INSERT INTO employee (name, position, department, email, contact_number, address) 
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            employeeData.name,
+            employeeData.position || "",
+            employeeData.department || "",
+            employeeData.email || "",
+            employeeData.contact_number || "",
+            employeeData.address || ""
+          ],
+          function (err) {
+            if (err) {
+              console.error("❌ Error creating employee:", err.message);
+              return res.status(500).json({ error: "Database error", details: err.message });
+            }
+            
+            // Then create user account
+            const empId = this.lastID;
+            db.run(
+              `INSERT INTO users (name, role, password, FK_employee) VALUES (?, ?, ?, ?)`,
+              [name, role, hashedPassword, empId],
+              function (err) {
+                if (err) {
+                  console.error("❌ Error adding user:", err.message);
+                  return res.status(500).json({ error: "Database error", details: err.message });
+                }
+                res.status(200).json({ 
+                  message: "✅ User and employee added successfully",
+                  userId: this.lastID,
+                  employeeId: empId
+                });
+              }
+            );
+          }
+        );
+      } else {
+        return res.status(400).json({ error: "No employee selected or provided" });
+      }
+    } catch (err) {
+      console.error("❌ Error in add-user:", err);
+      res.status(500).json({ error: "Server error", details: err.message });
     }
   });
 
   // 🚀 Add Product
-server.post("/add-product", (req, res) => {
+server.post("/add-product", auditLog('add_product'), async (req, res) => {
   const {
     article,
     description,
@@ -369,37 +758,112 @@ server.post("/add-product", (req, res) => {
     on_hand_per_count,
     total_amount,
     remarks,
-    FK_employee
+    userName // we'll use userName instead of actual_user
   } = req.body;
 
-  if (!article || !unit_value || !FK_employee) {
-    return res.status(400).json({ error: "Missing required fields." });
+  // Use userName as actual_user if actual_user is not provided
+  const actual_user = req.body.actual_user || userName;
+
+  // Log the received data for debugging
+  console.log("📦 Received product data:", req.body);
+
+  // Validate required fields
+  const missingFields = [];
+  if (!article) missingFields.push("Article name");
+  if (!unit_value) missingFields.push("Unit value");
+  if (!actual_user && !userName) missingFields.push("User information");
+
+  if (missingFields.length > 0) {
+    const errorMessage = `Missing required fields: ${missingFields.join(", ")}`;
+    console.error("❌", errorMessage);
+    return res.status(400).json({ error: errorMessage });
   }
 
-  db.run(
-    `INSERT INTO products (
-      article, description, date_acquired, property_number, unit, unit_value, 
-      balance_per_card, on_hand_per_count, total_amount, FK_employee, remarks
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      article,
-      description,
-      date_acquired,
-      property_number,
-      unit,
-      unit_value,
-      balance_per_card,
-      on_hand_per_count,
-      total_amount,
-      FK_employee,
-      remarks,
-    ],
-    function (err) {
+  // Log the validated data
+  console.log("📦 Validated product data:", {
+    ...req.body,
+    actual_user: actual_user
+  });
+
+  // Validate numeric fields
+  if (isNaN(parseFloat(unit_value))) {
+    return res.status(400).json({ error: "Unit value must be a valid number" });
+  }
+
+  // First get the employee ID for the actual user
+  console.log("🔍 Looking up employee by name:", actual_user);
+  db.get(
+    "SELECT id, name FROM employee WHERE name = ?",
+    [actual_user],
+    (err, employee) => {
       if (err) {
-        console.error("❌ Database Error:", err.message);
+        console.error("❌ Error finding employee:", err.message);
         return res.status(500).json({ error: "Database error", details: err.message });
       }
-      res.status(200).json({ message: "✅ Product added successfully!", productId: this.lastID });
+      if (!employee) {
+        console.error("❌ Employee not found for name:", actual_user);
+        return res.status(400).json({ error: "Actual user (employee) not found" });
+      }
+      console.log("✅ Found employee:", employee);
+
+      // Convert string values to numbers
+      const numericUnitValue = parseFloat(unit_value);
+      const numericBalancePerCard = parseInt(balance_per_card) || 0;
+      const numericOnHandPerCount = parseInt(on_hand_per_count) || 0;
+      const numericTotalAmount = parseFloat(total_amount) || (numericUnitValue * numericBalancePerCard);
+
+      // Now insert the product with the found employee ID
+      console.log("📝 Inserting product with employee ID:", employee.id);
+      db.run(
+        `INSERT INTO products (
+          article, description, date_acquired, property_number, unit, unit_value, 
+          balance_per_card, on_hand_per_count, total_amount, FK_employee, remarks
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          article,
+          description || null,
+          date_acquired || null,
+          property_number || null,
+          unit || null,
+          numericUnitValue,
+          numericBalancePerCard,
+          numericOnHandPerCount,
+          numericTotalAmount,
+          employee.id,
+          remarks || null,
+        ],
+        function (err) {
+          if (err) {
+            console.error("❌ Database Error:", err.message);
+            return res.status(500).json({ error: "Database error", details: err.message });
+          }
+
+          // Invalidate relevant caches
+          cache.invalidate('get-products');
+          cache.invalidate('products/all');
+          cache.invalidate('api/products');
+          
+          // Return success with the new product ID and details
+          res.status(200).json({ 
+            message: "✅ Product added successfully!",
+            product: {
+              id: this.lastID,
+              article,
+              description,
+              date_acquired: date_acquired || new Date().toISOString().split('T')[0],
+              property_number,
+              unit,
+              unit_value: numericUnitValue,
+              balance_per_card: numericBalancePerCard,
+              on_hand_per_count: numericOnHandPerCount,
+              total_amount: numericTotalAmount,
+              FK_employee: employee.id,
+              employee_name: actual_user,  // Changed to match the expected field name
+              remarks
+            }
+          });
+        }
+      );
     }
   );
 });
@@ -410,38 +874,76 @@ server.post("/add-receipt", (req, res) => {
     rrspNo, date, description, quantity, icsNo, dateAcquired, amount, endUser, remarks,
     returnedBy,
     receivedBy,
-    secondReceivedBy = {},
-    created_by // <-- user id of the submitter (employee/admin)
+    secondReceivedBy = {}
   } = req.body;
 
-  // ✅ Validate required fields
-  if (
-    !rrspNo || !date || !description || !quantity || !icsNo || !dateAcquired || !amount || !endUser ||
-    !returnedBy.name || !returnedBy.position || !returnedBy.returnDate || !returnedBy.location ||
-    !receivedBy.name || !receivedBy.position || !receivedBy.receiveDate || !receivedBy.location
-  ) {
-    console.error("❌ Missing Fields:", req.body);
-    return res.status(400).json({ error: "Missing required fields", details: req.body });
+  // Get the user ID from the employee name (endUser)
+  db.get(
+    `SELECT u.id 
+     FROM users u 
+     JOIN employee e ON u.FK_employee = e.id 
+     WHERE e.name = ?`,
+    [endUser],
+    (err, user) => {
+      if (err) {
+        console.error("❌ Error finding user:", err.message);
+        return res.status(500).json({ error: "Database error", details: err.message });
+      }
+      if (!user) {
+        return res.status(400).json({ error: "User not found for the given employee" });
+      }
+
+      // Log the received data for debugging
+      console.log("📝 Received return data:", {
+        rrspNo, date, description, quantity, icsNo, dateAcquired, 
+        amount, endUser, returnedBy, receivedBy
+      });
+
+      // ✅ Validate required fields
+      const missingFields = [];
+      if (!rrspNo) missingFields.push("RRSP Number");
+      if (!date) missingFields.push("Date");
+      if (!description) missingFields.push("Description");
+      if (!quantity) missingFields.push("Quantity");
+      if (!icsNo) missingFields.push("ICS Number");
+      if (!dateAcquired) missingFields.push("Date Acquired");
+      if (!amount) missingFields.push("Amount");
+      if (!endUser) missingFields.push("End User");
+      if (!returnedBy?.name) missingFields.push("Returned By Name");
+      if (!returnedBy?.position) missingFields.push("Returned By Position");
+      if (!returnedBy?.returnDate) missingFields.push("Return Date");
+      if (!returnedBy?.location) missingFields.push("Return Location");
+      if (!receivedBy?.name) missingFields.push("Received By Name");
+      if (!receivedBy?.position) missingFields.push("Received By Position");
+      if (!receivedBy?.receiveDate) missingFields.push("Receive Date");
+      if (!receivedBy?.location) missingFields.push("Receive Location");
+
+  if (missingFields.length > 0) {
+    console.error("❌ Missing Fields:", missingFields);
+    return res.status(400).json({ 
+      error: "Missing required fields", 
+      details: `Missing: ${missingFields.join(", ")}` 
+    });
   }
 
-  const sql = `
-    INSERT INTO returns (
-      rrsp_no, date, description, quantity, ics_no, date_acquired, amount, end_user, remarks,
-      returned_by, returned_by_position, returned_by_date, returned_by_location,
-      received_by, received_by_position, received_by_date, received_by_location,
-      second_received_by, second_received_by_position, second_received_by_date, second_received_by_location,
-      created_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
+      const sql = `
+        INSERT INTO returns (
+          rrsp_no, date, description, quantity, ics_no, date_acquired, amount, end_user, remarks,
+          returned_by, returned_by_position, returned_by_date, returned_by_location,
+          received_by, received_by_position, received_by_date, received_by_location,
+          second_received_by, second_received_by_position, second_received_by_date, second_received_by_location,
+          created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
 
-  const values = [
-    rrspNo, date, description, quantity, icsNo, dateAcquired, amount, endUser, remarks || null,
-    returnedBy.name, returnedBy.position?.trim() || null, returnedBy.returnDate, returnedBy.location,
-    receivedBy.name, receivedBy.position?.trim() || null, receivedBy.receiveDate, receivedBy.location,
-    secondReceivedBy?.name?.trim() || null, secondReceivedBy?.position?.trim() || null,
-    secondReceivedBy?.receiveDate?.trim() || null, secondReceivedBy?.location || null,
-    created_by // <-- user id
-  ];
+      const values = [
+        rrspNo, date, description, quantity, icsNo, dateAcquired, amount, endUser, remarks || null,
+        returnedBy.name, returnedBy.position?.trim() || null, returnedBy.returnDate, returnedBy.location,
+        receivedBy.name, receivedBy.position?.trim() || null, receivedBy.receiveDate, receivedBy.location,
+        secondReceivedBy?.name?.trim() || null, secondReceivedBy?.position?.trim() || null,
+        secondReceivedBy?.receiveDate?.trim() || null, secondReceivedBy?.location || null,
+        user.id // Using the found user ID
+      ];
 
   db.run(sql, values, function (err) {
     if (err) {
@@ -455,31 +957,75 @@ server.post("/add-receipt", (req, res) => {
 
   // 🚀 Get Products for Employee
   server.get("/get-products/:user", (req, res) => {
-    const userName = req.params.user;
-    db.get("SELECT id FROM employee WHERE name = ?", [userName], (err, emp) => {
-      if (err || !emp) {
-        return res.status(404).json({ error: "Employee not found" });
-      }
-      db.all(
-        "SELECT * FROM products WHERE FK_employee = ? ORDER BY date_acquired DESC",
-        [emp.id],
-        (err, results) => {
-          if (err) {
-            console.error("❌ Error fetching products:", err.message);
-            return res.status(500).json({ error: "Database error", details: err.message });
-          }
-          res.status(200).json(results);
+    const userName = decodeURIComponent(req.params.user);
+    console.log("🔍 Fetching products for user:", userName);
+    
+    // First verify if the employee exists and get their ID
+    db.get(
+      `SELECT e.id, e.name, e.position, e.department, 
+              (SELECT COUNT(*) FROM products WHERE FK_employee = e.id) as product_count
+       FROM employee e 
+       WHERE e.name = ?`, 
+      [userName], 
+      (err, emp) => {
+        if (err) {
+          console.error("❌ Error finding employee:", err.message);
+          return res.status(500).json({ error: "Database error", details: err.message });
         }
-      );
+        if (!emp) {
+          console.error("❌ Employee not found:", userName);
+          return res.status(404).json({ error: "Employee not found" });
+        }
+        
+        console.log("📊 Employee found:", emp);
+        
+        db.all(
+          `SELECT p.*, e.name as employee_name 
+           FROM products p 
+           LEFT JOIN employee e ON p.FK_employee = e.id 
+           WHERE p.FK_employee = ? 
+           ORDER BY p.date_acquired DESC`,
+          [emp.id],
+          (err, results) => {
+            if (err) {
+              console.error("❌ Error fetching products:", err.message);
+              return res.status(500).json({ error: "Database error", details: err.message });
+            }
+            console.log(`✅ Found ${results.length} products for user ${userName} (Employee ID: ${emp.id})`);
+            if (results.length === 0) {
+              console.log("ℹ️ No products found for this employee");
+            }
+            res.status(200).json(results);
+          }
+        );
     });
   });
 
   // 🚀 Get Receipts for Employee
   server.get("/get-receipts/:endUser", (req, res) => {
-    db.all(`SELECT * FROM returns WHERE end_user = ?`, [req.params.endUser], (err, results) => {
-      if (err) return res.status(500).json({ error: "Database error", details: err.message });
-      res.status(200).json(results);
-    });
+    console.log("🔍 Fetching receipts for user:", req.params.endUser);
+    
+    if (!req.params.endUser) {
+      console.error("❌ No endUser provided");
+      return res.status(400).json({ error: "End user is required" });
+    }
+
+    db.all(
+      `SELECT r.*, e.name as employee_name 
+       FROM returns r 
+       LEFT JOIN employee e ON r.created_by = e.id 
+       WHERE r.end_user = ? 
+       ORDER BY r.date DESC`,
+      [req.params.endUser],
+      (err, results) => {
+        if (err) {
+          console.error("❌ Database error fetching receipts:", err);
+          return res.status(500).json({ error: "Database error", details: err.message });
+        }
+        console.log(`✅ Found ${results.length} receipts for user ${req.params.endUser}`);
+        res.status(200).json(results);
+      }
+    );
   });
 
   server.get("/get-users", (req, res) => {
@@ -495,6 +1041,28 @@ server.post("/add-receipt", (req, res) => {
   // 🚀 Export Products as PDF
   server.get("/export-products/pdf", (req, res) => {
     const { startDate, endDate } = req.query;
+
+    // Validate date parameters
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: "Start date and end date are required" });
+    }
+
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
+      return res.status(400).json({ error: "Dates must be in YYYY-MM-DD format" });
+    }
+
+    // Validate date range
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ error: "Invalid date format" });
+    }
+    if (end < start) {
+      return res.status(400).json({ error: "End date must be after start date" });
+    }
+
     const doc = new PDFDocument();
 
     res.setHeader("Content-Disposition", 'attachment; filename="products_report.pdf"');
@@ -585,7 +1153,11 @@ server.post("/add-receipt", (req, res) => {
   
     // 🚀 Get ALL articles (For Supervisor View)
     server.get("/api/products/all", (req, res) => {
-    db.all("SELECT * FROM products", [], (err, rows) => {
+    db.all(`
+      SELECT p.*, e.name as employee_name 
+      FROM products p
+      LEFT JOIN employee e ON p.FK_employee = e.id
+      ORDER BY p.date_acquired DESC`, [], (err, rows) => {
       if (err) {
         console.error("❌ Error fetching articles:", err.message);
         return res.status(500).json({ error: "Database error", details: err.message });
@@ -610,13 +1182,20 @@ server.post("/add-receipt", (req, res) => {
   });
 
   server.get("/api/logs", (req, res) => {
-    db.all("SELECT * FROM activity_logs", [], (err, rows) => {
-      if (err) {
-        console.error("❌ Error fetching logs:", err.message);
-        return res.status(500).json({ error: "Database error", details: err.message });
+    db.all(
+      `SELECT al.*, u.name as user_name, u.role as user_role
+       FROM activity_logs al
+       LEFT JOIN users u ON al.user_id = u.id
+       ORDER BY al.timestamp DESC`,
+      [],
+      (err, rows) => {
+        if (err) {
+          console.error("❌ Error fetching logs:", err.message);
+          return res.status(500).json({ error: "Database error", details: err.message });
+        }
+        res.status(200).json(rows || []);
       }
-      res.status(200).json(rows);
-    });
+    );
   });
 
   
@@ -631,11 +1210,6 @@ server.post("/add-receipt", (req, res) => {
   res.sendFile(path.join(buildPath, "index.html"));
   });
 
-    
-  // 🚀 Start Express Server
-  server.listen(PORT, () => {
-    console.log(`🚀 Express server running on port ${PORT}`);
-  });
 
 // 🚀 Add Employee
 server.post("/add-employee", (req, res) => {
@@ -676,12 +1250,61 @@ server.post("/add-employee", (req, res) => {
   });
 });
 
-// Get all employees
+// Get all employees with proper error handling and pagination
 server.get("/get-employees", (req, res) => {
-  db.all("SELECT * FROM employee", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+
+  db.all(
+    "SELECT COUNT(*) as total FROM employee",
+    [],
+    (countErr, [{ total }]) => {
+      if (countErr) {
+        console.error("❌ Error counting employees:", countErr.message);
+        return res.status(500).json({ error: "Database error", details: countErr.message });
+      }
+
+      db.all(
+        "SELECT * FROM employee LIMIT ? OFFSET ?",
+        [limit, offset],
+        (err, rows) => {
+          if (err) {
+            console.error("❌ Error fetching employees:", err.message);
+            return res.status(500).json({ error: "Database error", details: err.message });
+          }
+          res.json({
+            total,
+            page,
+            totalPages: Math.ceil(total / limit),
+            employees: rows || []
+          });
+        }
+      );
+    }
+  );
+});
+
+// Get employee profile by name
+server.get("/get-employee-profile/:name", (req, res) => {
+  const employeeName = req.params.name;
+  db.get(
+    `SELECT e.*, u.role 
+     FROM employee e 
+     LEFT JOIN users u ON e.id = u.FK_employee 
+     WHERE e.name = ?`,
+    [employeeName],
+    (err, employee) => {
+      if (err) {
+        console.error("❌ Error fetching employee profile:", err.message);
+        return res.status(500).json({ error: "Database error", details: err.message });
+      }
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+      res.json(employee);
+    }
+  );
 });
 
 // Edit employee
@@ -750,6 +1373,37 @@ server.put("/edit-product/:id", (req, res) => {
     remarks,
     FK_employee // optional: allow changing assigned employee
   } = req.body;
+
+  // Validate required fields
+  const missingFields = [];
+  if (!article) missingFields.push("Article name");
+  if (!unit_value) missingFields.push("Unit value");
+  
+  if (missingFields.length > 0) {
+    return res.status(400).json({ 
+      error: "Missing required fields", 
+      details: missingFields.join(", ") 
+    });
+  }
+
+  // Validate numeric fields
+  if (isNaN(parseFloat(unit_value))) {
+    return res.status(400).json({ error: "Unit value must be a valid number" });
+  }
+  if (balance_per_card && isNaN(parseInt(balance_per_card))) {
+    return res.status(400).json({ error: "Balance per card must be a valid number" });
+  }
+  if (on_hand_per_count && isNaN(parseInt(on_hand_per_count))) {
+    return res.status(400).json({ error: "On hand per count must be a valid number" });
+  }
+  if (total_amount && isNaN(parseFloat(total_amount))) {
+    return res.status(400).json({ error: "Total amount must be a valid number" });
+  }
+
+  // Validate date format
+  if (date_acquired && !date_acquired.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return res.status(400).json({ error: "Date acquired must be in YYYY-MM-DD format" });
+  }
 
   db.run(
     `UPDATE products SET
@@ -825,22 +1479,64 @@ server.put("/edit-return/:id", (req, res) => {
   );
 });
 
-// 🚀 Edit User
+  // 🚀 Edit User
 server.put("/edit-user/:id", (req, res) => {
-  const { name, role } = req.body;
-  db.run(
-    `UPDATE users SET name = ?, role = ? WHERE id = ?`,
-    [name, role, req.params.id],
-    function (err) {
-      if (err) {
-        console.error("❌ Error updating user:", err.message);
-        return res.status(500).json({ error: "Database error", details: err.message });
+  const { name, role, employee_id } = req.body;
+  
+  // If updating an employee's profile
+  if (employee_id) {
+    db.run(
+      `UPDATE employee SET 
+       name = ?,
+       position = ?,
+       department = ?,
+       email = ?,
+       contact_number = ?,
+       address = ?
+       WHERE employee_id = ?`,
+      [
+        req.body.name,
+        req.body.position,
+        req.body.department,
+        req.body.email,
+        req.body.contact_number,
+        req.body.address,
+        employee_id
+      ],
+      function(err) {
+        if (err) {
+          console.error("❌ Error updating employee profile:", err.message);
+          return res.status(500).json({ error: "Database error", details: err.message });
+        }
+        
+        // Also update the associated user record if it exists
+        db.run(
+          `UPDATE users SET name = ?
+           WHERE FK_employee = (SELECT id FROM employee WHERE employee_id = ?)`,
+          [name, employee_id],
+          function(err) {
+            if (err) {
+              console.error("❌ Error updating user record:", err.message);
+              return res.status(500).json({ error: "Database error", details: err.message });
+            }
+            res.status(200).json({ message: "✅ Profile updated successfully" });
+          }
+        );
       }
-      res.status(200).json({ message: "✅ User updated successfully" });
-    }
-  );
+    );
+  } else {
+    // For admin/supervisor updates
+    db.run(
+      `UPDATE users SET name = ?, role = ? WHERE id = ?`,
+      [name, role, req.params.id],
+      function (err) {
+        if (err) {
+          console.error("❌ Error updating user:", err.message);
+          return res.status(500).json({ error: "Database error", details: err.message });
+        }
+        res.status(200).json({ message: "✅ User updated successfully" });
+      }
+    );
+  }
 });
-
-
-
-
+}); // Close db.serialize

@@ -11,6 +11,35 @@ body {
   padding-top: 80px; /* Avoids content being hidden behind header */
 }
 
+/* ===== 🔹 Add User Section ===== */
+.add-supervisor-section {
+  background: white;
+  padding: 20px;
+  margin: 20px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.add-supervisor-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.add-supervisor-btn {
+  background-color: #28a745;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.add-supervisor-btn:hover {
+  background-color: #218838;
+}
+
 /* ===== 🔹 Fixed Header for Admin Panel ===== */
 .header {
   background: #222;
