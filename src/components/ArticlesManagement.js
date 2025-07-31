@@ -18,9 +18,15 @@ const ArticlesManagement = () => {
     try {
       setLoading(true);
       // Fetch both products and employees
+      const config = {
+        headers: {
+          'Accept': 'application/json'
+        }
+      };
+      
       const [productsResponse, employeesResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/get-products/all`),
-        axios.get(`${API_BASE_URL}/get-employees`)
+        axios.get(`${API_BASE_URL}/get-products/all`, config),
+        axios.get(`${API_BASE_URL}/get-employees`, config)
       ]);
       
       console.log('Fetched products:', productsResponse.data);

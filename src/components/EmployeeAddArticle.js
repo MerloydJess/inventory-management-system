@@ -3,9 +3,11 @@ import axios from "axios";
 import { useNavigate } from 'react-router-dom';
 import "./EmployeeAddArticle.css"; // ✅ Make sure to style accordingly
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const EmployeeAddArticle = ({ userName }) => {
+  console.log('API_BASE_URL:', API_BASE_URL); // Debug log
+  console.log('Employee username:', userName); // Add user debugging
   const [form, setForm] = useState({
     article: "",
     description: "",
@@ -47,12 +49,22 @@ const EmployeeAddArticle = ({ userName }) => {
       ...form,
       userName,
       actual_user: userName, // Explicitly set the actual_user
+      name: userName, // Add this to ensure consistency
       total_amount: parseFloat(form.unit_value || 0) * parseFloat(form.balance_per_card || 0)
     };
 
     try {
-      console.log('Sending data:', dataToSend);
-      const response = await axios.post(`${API_BASE_URL}/add-product`, dataToSend);
+      console.log('Sending data to:', `${API_BASE_URL}/add-product`);
+      console.log('Data being sent:', dataToSend);
+      
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      };
+      
+      const response = await axios.post(`${API_BASE_URL}/add-product`, dataToSend, config);
       console.log('Response:', response.data);
       
       if (response.data) {
@@ -78,8 +90,24 @@ const EmployeeAddArticle = ({ userName }) => {
         throw new Error(response.data.message || 'Failed to add article');
       }
     } catch (error) {
-      console.error("❌ Error adding article:", error.response?.data || error.message);
-      alert("❌ Failed to add article: " + (error.response?.data?.message || error.message));
+      console.error("❌ Error adding article:", error);
+      console.error("Response data:", error.response?.data);
+      console.error("Response status:", error.response?.status);
+      console.error("Response headers:", error.response?.headers);
+      
+      let errorMessage = "Failed to add article: ";
+      if (error.response) {
+        // The server responded with a status code outside of 2xx
+        errorMessage += error.response.data?.message || error.response.data || error.response.statusText;
+      } else if (error.request) {
+        // The request was made but no response received
+        errorMessage += "No response from server. Please check your connection.";
+      } else {
+        // Something happened in setting up the request
+        errorMessage += error.message;
+      }
+      
+      alert(errorMessage);
     }
   };
 

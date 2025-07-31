@@ -25,8 +25,16 @@ const EmployeePanel = ({ userName }) => {
     }
 
     console.log('🔍 Fetching products for user:', userName);
-    axios.get(`${API_BASE_URL}/get-products-by-employee/${encodeURIComponent(userName)}`)
-      .then(res => {
+    axios.get(`${API_BASE_URL}/get-products/${encodeURIComponent(userName)}`, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+    .then(res => {
+        if (typeof res.data === 'string') {
+          console.error('Received HTML instead of JSON:', res.data);
+          throw new Error('Invalid response format');
+        }
         console.log('🟢 Fetched Products:', res.data);
         let productsData = [];
         

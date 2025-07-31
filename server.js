@@ -66,7 +66,6 @@
   const PDFDocument = require("pdfkit");
   const ExcelJS = require("exceljs");
   const isPackaged = require("electron-is-packaged").isPackaged || process.mainModule?.filename.indexOf('app.asar') !== -1;
-  const PORT = process.env.PORT || 5000;
   const isDev = process.env.NODE_ENV !== "production";
   process.env.NODE_ENV = isDev ? "development" : "production";
   
@@ -126,10 +125,10 @@
 
   // ✅ Enable CORS and configure limits
   server.use(cors({
-    origin: 'http://localhost:3000',
+    origin: true, // Allow all origins in development
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
   }));
   
   // Add logging middleware
@@ -224,6 +223,44 @@ server.get('/get-products/all', async (req, res) => {
   const sortBy = req.query.sortBy || 'date_acquired';
   const sortOrder = req.query.sortOrder === 'asc' ? 'ASC' : 'DESC';
   const offset = (page - 1) * limit;
+  
+  console.log("🔍 Fetching all products");
+  
+  try {
+    const query = `
+      SELECT p.*,
+             e.name as employee_name,
+             e.position as employee_position,
+             e.department as employee_department
+      FROM products p
+      LEFT JOIN employee e ON e.name = p.actual_user
+      ORDER BY p.${sortBy} ${sortOrder}
+      LIMIT ? OFFSET ?
+    `;
+
+    db.all(query, [limit, offset], (err, products) => {
+      if (err) {
+        console.error("Error fetching products:", err);
+        return res.status(500).json({ message: "Error fetching products" });
+      }
+
+      console.log(`Found ${products.length} products`);
+      
+      // Map the products to include proper user information
+      const mappedProducts = products.map(product => ({
+        ...product,
+        actual_user: product.actual_user || '',
+        employee_name: product.employee_name || product.actual_user || '',
+        employee_position: product.employee_position || '',
+        employee_department: product.employee_department || ''
+      }));
+
+      res.json(mappedProducts);
+    });
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 
   try {
     // Get total count with search
@@ -756,6 +793,8 @@ server.post("/login", (req, res) => {
 
   // 🚀 Add Product
 server.post("/add-product", auditLog('add_product'), async (req, res) => {
+  // Set proper headers
+  res.setHeader('Content-Type', 'application/json');
   const {
     article,
     description,
@@ -767,7 +806,7 @@ server.post("/add-product", auditLog('add_product'), async (req, res) => {
     on_hand_per_count,
     total_amount,
     remarks,
-    userName // we'll use userName instead of actual_user
+    userName
   } = req.body;
 
   // Use userName as actual_user if actual_user is not provided
@@ -777,15 +816,11 @@ server.post("/add-product", auditLog('add_product'), async (req, res) => {
   console.log("📦 Received product data:", req.body);
 
   // Validate required fields
-  const missingFields = [];
-  if (!article) missingFields.push("Article name");
-  if (!unit_value) missingFields.push("Unit value");
-  if (!actual_user && !userName) missingFields.push("User information");
-
-  if (missingFields.length > 0) {
-    const errorMessage = `Missing required fields: ${missingFields.join(", ")}`;
-    console.error("❌", errorMessage);
-    return res.status(400).json({ error: errorMessage });
+  if (!article || !unit_value || (!actual_user && !userName)) {
+    return res.status(400).json({ 
+      message: "Missing required fields",
+      required: ['article', 'unit_value', 'actual_user or userName']
+    });
   }
 
   // Log the validated data
@@ -794,87 +829,71 @@ server.post("/add-product", auditLog('add_product'), async (req, res) => {
     actual_user: actual_user
   });
 
-  // Validate numeric fields
-  if (isNaN(parseFloat(unit_value))) {
-    return res.status(400).json({ error: "Unit value must be a valid number" });
-  }
-
   // First get the employee ID for the actual user
   console.log("🔍 Looking up employee by name:", actual_user);
   db.get(
-    "SELECT id, name FROM employee WHERE name = ?",
+    "SELECT id, name, position, department FROM employee WHERE name = ?",
     [actual_user],
     (err, employee) => {
       if (err) {
-        console.error("❌ Error finding employee:", err.message);
-        return res.status(500).json({ error: "Database error", details: err.message });
+        console.error("Database error:", err);
+        return res.status(500).json({ message: "Database error" });
       }
+
       if (!employee) {
-        console.error("❌ Employee not found for name:", actual_user);
-        return res.status(400).json({ error: "Actual user (employee) not found" });
+        console.error("Employee not found:", actual_user);
+        return res.status(400).json({ message: "Employee not found" });
       }
-      console.log("✅ Found employee:", employee);
 
-      // Convert string values to numbers
-      const numericUnitValue = parseFloat(unit_value);
-      const numericBalancePerCard = parseInt(balance_per_card) || 0;
-      const numericOnHandPerCount = parseInt(on_hand_per_count) || 0;
-      const numericTotalAmount = parseFloat(total_amount) || (numericUnitValue * numericBalancePerCard);
+      console.log("Found employee:", employee);
 
-      // Now insert the product with the found employee ID
-      console.log("📝 Inserting product with employee ID:", employee.id);
-      db.run(
-        `INSERT INTO products (
-          article, description, date_acquired, property_number, unit, unit_value, 
-          balance_per_card, on_hand_per_count, total_amount, FK_employee, remarks
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
+      // Create the product with employee association
+      const insertQuery = `
+        INSERT INTO products (
           article,
-          description || null,
-          date_acquired || null,
-          property_number || null,
-          unit || null,
-          numericUnitValue,
-          numericBalancePerCard,
-          numericOnHandPerCount,
-          numericTotalAmount,
-          employee.id,
-          remarks || null,
-        ],
-        function (err) {
-          if (err) {
-            console.error("❌ Database Error:", err.message);
-            return res.status(500).json({ error: "Database error", details: err.message });
-          }
+          description,
+          date_acquired,
+          property_number,
+          unit,
+          unit_value,
+          balance_per_card,
+          on_hand_per_count,
+          total_amount,
+          remarks,
+          actual_user,
+          FK_employee
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
 
-          // Invalidate relevant caches
-          cache.invalidate('get-products');
-          cache.invalidate('products/all');
-          cache.invalidate('api/products');
-          
-          // Return success with the new product ID and details
-          res.status(200).json({ 
-            message: "✅ Product added successfully!",
-            product: {
-              id: this.lastID,
-              article,
-              description,
-              date_acquired: date_acquired || new Date().toISOString().split('T')[0],
-              property_number,
-              unit,
-              unit_value: numericUnitValue,
-              balance_per_card: numericBalancePerCard,
-              on_hand_per_count: numericOnHandPerCount,
-              total_amount: numericTotalAmount,
-              FK_employee: employee.id,
-              employee_name: actual_user,  // Changed to match the expected field name
-              remarks
-            }
-          });
+      const values = [
+        article,
+        description || '',
+        date_acquired || new Date().toISOString().split('T')[0],
+        property_number || '',
+        unit || '',
+        parseFloat(unit_value) || 0,
+        parseInt(balance_per_card) || 0,
+        parseInt(on_hand_per_count) || 0,
+        parseFloat(total_amount) || 0,
+        remarks || '',
+        actual_user,
+        employee.id
+      ];
+
+      db.run(insertQuery, values, function(err) {
+        if (err) {
+          console.error("Error inserting product:", err);
+          return res.status(500).json({ message: "Error creating product" });
         }
-      );
-    }
-  );
+
+        console.log("Product added successfully with ID:", this.lastID);
+        res.json({
+          message: "Product added successfully",
+          productId: this.lastID,
+          employee: employee
+        });
+      });
+    });
 });
 
 // 🚀 Add Receipt (Return)
@@ -987,83 +1006,52 @@ server.post("/add-receipt", (req, res) => {
 
 
   // 🚀 Get Products for Employee
-  server.get("/get-products/:user", async (req, res) => {
+  server.get("/get-products/:user", (req, res) => {
     const userName = decodeURIComponent(req.params.user);
     console.log("🔍 Fetching products for user:", userName);
     
-    try {
-      // Clear any cached data to ensure fresh results
-      cache.invalidate('get-products');
-      cache.invalidate('products');
-      
-      // First verify if the employee exists and get their ID
-      db.get(
-        `SELECT e.id, e.name, e.position, e.department, e.employee_id
-         FROM employee e 
-         WHERE e.name = ? OR e.employee_id = ?`, 
-        [userName, userName], 
-        async (err, emp) => {
-          if (err) {
-            console.error("❌ Error finding employee:", err.message);
-            return res.status(500).json({ error: "Database error", details: err.message });
-          }
-          if (!emp) {
-            console.error("❌ Employee not found:", userName);
-            return res.status(404).json({ error: "Employee not found" });
-          }
-          
-          console.log("📊 Employee found:", emp);
-          
-          // Get all products for this employee with full details
-          const query = `
-            SELECT 
-              p.*,
-              e.name as employee_name,
-              e.employee_id,
-              e.position as employee_position,
-              e.department as employee_department
-            FROM products p 
-            LEFT JOIN employee e ON p.FK_employee = e.id 
-            WHERE p.FK_employee = ? 
-            ORDER BY p.date_acquired DESC NULLS LAST, p.id DESC`;
-          
-          db.all(query, [emp.id], (err, results) => {
-            if (err) {
-              console.error("❌ Error fetching products:", err.message);
-              return res.status(500).json({ error: "Database error", details: err.message });
-            }
-
-            // Ensure results is an array
-            const resultsArray = Array.isArray(results) ? results : [];
-
-            // Process the results to ensure all fields are properly formatted
-            const processedResults = resultsArray.map(row => ({
-              ...row,
-              date_acquired: row.date_acquired || null,
-              property_number: row.property_number || '',
-              unit: row.unit || '',
-              balance_per_card: row.balance_per_card || 0,
-              on_hand_per_count: row.on_hand_per_count || 0,
-              total_amount: row.total_amount || (row.unit_value * (row.balance_per_card || 0)),
-              remarks: row.remarks || '',
-              employee_name: row.employee_name || '',
-              employee_id: row.employee_id || emp.employee_id || '',
-              employee_position: row.employee_position || emp.position || '',
-              employee_department: row.employee_department || emp.department || ''
-            }));
-
-            console.log(`✅ Found ${processedResults.length} products for user ${userName} (Employee ID: ${emp.id})`);
-            if (processedResults.length === 0) {
-              console.log("ℹ️ No products found for this employee");
-            }
-            res.status(200).json({ products: processedResults }); // Return as an object with products array
-          });
-      });
-    } catch (error) {
-      console.error("❌ Error in get-products:", error);
-      res.status(500).json({ error: "Server error", details: error.message });
+    // Set JSON content type
+    res.setHeader('Content-Type', 'application/json');
+    
+    if (!userName) {
+      return res.status(400).json({ message: "User name is required" });
     }
-  });
+
+    const query = `
+      SELECT p.*, 
+             e.name as employee_name,
+             e.position as employee_position,
+             e.department as employee_department,
+             e.employee_id
+      FROM products p
+      LEFT JOIN employee e ON p.FK_employee = e.id
+      WHERE e.name = ?
+      ORDER BY p.date_acquired DESC, p.id DESC
+    `;
+
+    db.all(query, [userName], (err, products) => {
+      if (err) {
+        console.error("❌ Error fetching products:", err);
+        return res.status(500).json({ error: "Database error", details: err.message });
+      }
+      
+      console.log(`✅ Found ${products.length} products for user ${userName}`);
+      
+      // Map and format the products
+      const formattedProducts = products.map(product => ({
+        ...product,
+        unit_value: parseFloat(product.unit_value) || 0,
+        balance_per_card: parseInt(product.balance_per_card) || 0,
+        on_hand_per_count: parseInt(product.on_hand_per_count) || 0,
+        total_amount: parseFloat(product.total_amount) || 0,
+        employee_name: product.employee_name || userName,
+        employee_id: product.employee_id || '',
+        employee_position: product.employee_position || '',
+        employee_department: product.employee_department || ''
+      }));
+      
+      res.json(formattedProducts);
+    });
   });
 
   // 🚀 Get Receipts for Employee
@@ -1330,7 +1318,12 @@ server.post("/add-receipt", (req, res) => {
           e.email as employee_email,
           e.contact_number as employee_contact,
           e.address as employee_address,
-          COALESCE(e.name, '') as actual_user
+          COALESCE(e.name, 'No User Assigned') as actual_user,
+          CASE 
+            WHEN p.FK_employee IS NOT NULL THEN COALESCE(e.name, 'No User Assigned')
+            WHEN p.actual_user IS NOT NULL THEN p.actual_user
+            ELSE 'Admin'
+          END as assigned_to
         FROM products p
         LEFT JOIN employee e ON p.FK_employee = e.id
         ORDER BY p.date_acquired DESC NULLS LAST, p.id DESC`;
@@ -1351,13 +1344,14 @@ server.post("/add-receipt", (req, res) => {
           on_hand_per_count: row.on_hand_per_count || 0,
           total_amount: row.total_amount || 0,
           remarks: row.remarks || '',
-          employee_name: row.employee_name || '',
+          employee_name: row.employee_name || 'No User Assigned',
           employee_id: row.employee_id || '',
           employee_position: row.employee_position || '',
           employee_department: row.employee_department || '',
           employee_email: row.employee_email || '',
           employee_contact: row.employee_contact || '',
-          employee_address: row.employee_address || ''
+          employee_address: row.employee_address || '',
+          user: row.assigned_to || 'No User Assigned' // This will be used for filtering
         }));
 
         console.log(`✅ Found ${processedRows.length} articles`);
@@ -1436,15 +1430,31 @@ server.post("/add-receipt", (req, res) => {
   });
 
   
-  // Serve React build for all other requests
+  // Define the build path
   const buildPath = isPackaged
-  ? path.join(process.resourcesPath, "build")  // ✅ correct in packaged
-  : path.join(__dirname, "build");
+    ? path.join(process.resourcesPath, "build")
+    : path.join(__dirname, "build");
 
-  server.get("/ping", (_, res) => res.send("pong"))
-  server.use(express.static(buildPath));
-  server.get("*", (req, res) => {
-  res.sendFile(path.join(buildPath, "index.html"));
+  // Serve static files but exclude API routes
+  server.use(express.static(buildPath, {
+    index: false // Prevent serving index.html automatically
+  }));
+
+  // This should be the very last route
+  server.get("*", (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/') || 
+        req.path.startsWith('/get-') || 
+        req.path.startsWith('/add-') || 
+        req.path.startsWith('/edit-') || 
+        req.path.startsWith('/delete-') ||
+        req.path.startsWith('/export-') ||
+        req.path === '/login' ||
+        req.path === '/employee-login') {
+      return next();
+    }
+    // Serve index.html for all other routes
+    res.sendFile(path.join(buildPath, "index.html"));
   });
 
 
@@ -1959,4 +1969,12 @@ server.put("/edit-user/:id", (req, res) => {
       }
     );
   }
+}); // Close edit-user endpoint
+
+}); // Close Express server instance
+
+// Start the server
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
 });
