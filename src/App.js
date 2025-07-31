@@ -9,6 +9,8 @@ import "./App.css";
 import EmployeeReceipts from "./components/EmployeeReceipts";
 import EmployeeAddArticle from "./components/EmployeeAddArticle";
 import EmployeeAddReturn from "./components/EmployeeAddReturn";
+import ArticlesManagement from './components/ArticlesManagement';
+import ReturnsManagement from './components/ReturnsManagement';
 
 
 function App() {
@@ -71,6 +73,8 @@ function App() {
               )
             }
           />
+          <Route path="/manage-returns" element={<ReturnsManagement />} />
+          <Route path="/manage-articles" element={<ArticlesManagement />} />
           <Route path="/employee-receipts" element={<EmployeeReceipts userName={userName} />} />
           <Route path="/returns-panel" element={<ReturnsPanel />} />
           <Route path="/add-article" element={<EmployeeAddArticle userName={userName} />} />

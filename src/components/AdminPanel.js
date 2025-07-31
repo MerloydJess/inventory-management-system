@@ -45,6 +45,9 @@ const AdminPanel = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [adminNote, setAdminNote] = useState("");
+  const [showAdminEdit, setShowAdminEdit] = useState(false);
+  const [adminEditFeedback, setAdminEditFeedback] = useState(null);
 
   const navigate = useNavigate();
 
@@ -275,16 +278,30 @@ const AdminPanel = () => {
   // Handle edit form submit
   const handleEditProductSubmit = (e) => {
     e.preventDefault();
+    const endpoint = showAdminEdit ? 'admin/edit-product' : 'edit-product';
+    const productData = {
+      ...editingProduct,
+      ...(showAdminEdit && { adminNote })
+    };
+
     axios
-      .put(`${API_BASE_URL}/edit-product/${editingProduct.id}`, editingProduct)
-      .then(() => {
-        alert("✅ Article updated!");
+      .put(`${API_BASE_URL}/${endpoint}/${editingProduct.id}`, productData)
+      .then((response) => {
+        setAdminEditFeedback({
+          type: 'success',
+          message: showAdminEdit ? 'Article updated by admin!' : 'Article updated!'
+        });
         setEditingProduct(null);
+        setShowAdminEdit(false);
+        setAdminNote("");
         fetchProducts();
       })
       .catch((err) => {
         console.error("❌ Error updating product:", err.response?.data || err.message);
-        alert("❌ Error updating product! Check console.");
+        setAdminEditFeedback({
+          type: 'error',
+          message: `Error: ${err.response?.data?.error || err.message}`
+        });
       });
   };
 
@@ -325,12 +342,16 @@ const AdminPanel = () => {
 
   return (
     <div className="admin-panel">
+      <div className="admin-header-buttons">
+        <button className="returns-panel-btn" onClick={() => navigate("/returns-panel")}>
+          Go to Returns Panel
+        </button>
+        <button className="manage-articles-btn" onClick={() => navigate("/manage-articles")}>
+          Manage Articles
+        </button>
+      </div>
+
       <h2>Add New Article</h2>
-
-      <button className="returns-panel-btn" onClick={() => navigate("/returns-panel")}>
-        Go to Returns Panel
-      </button>
-
       <form onSubmit={handleProductSubmit}>
         <input type="text" name="article" placeholder="Article" value={product.article} onChange={handleChange} required />
         <textarea name="description" placeholder="Description" value={product.description} onChange={handleChange} />
@@ -516,6 +537,125 @@ const AdminPanel = () => {
         </tbody>
       </table>
 
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <div className="modal">
+          <div className="modal-content">
+            <h2>{showAdminEdit ? 'Admin Edit Article' : 'Edit Article'}</h2>
+            <form onSubmit={handleEditProductSubmit}>
+              <div className="form-group">
+                <label>Article Name:</label>
+                <input
+                  type="text"
+                  name="article"
+                  value={editingProduct.article}
+                  onChange={handleEditProductChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Description:</label>
+                <input
+                  type="text"
+                  name="description"
+                  value={editingProduct.description}
+                  onChange={handleEditProductChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>Unit:</label>
+                <input
+                  type="text"
+                  name="unit"
+                  value={editingProduct.unit}
+                  onChange={handleEditProductChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>Unit Value:</label>
+                <input
+                  type="number"
+                  name="unit_value"
+                  value={editingProduct.unit_value}
+                  onChange={handleEditProductChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Balance Per Card:</label>
+                <input
+                  type="number"
+                  name="balance_per_card"
+                  value={editingProduct.balance_per_card}
+                  onChange={handleEditProductChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>On Hand Count:</label>
+                <input
+                  type="number"
+                  name="on_hand_per_count"
+                  value={editingProduct.on_hand_per_count}
+                  onChange={handleEditProductChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>Actual User:</label>
+                <select
+                  name="actual_user"
+                  value={editingProduct.actual_user}
+                  onChange={handleEditProductChange}
+                  required
+                >
+                  <option value="">Select User</option>
+                  {employees.map(emp => (
+                    <option key={emp.id} value={emp.name}>{emp.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Remarks:</label>
+                <textarea
+                  name="remarks"
+                  value={editingProduct.remarks}
+                  onChange={handleEditProductChange}
+                />
+              </div>
+
+              {showAdminEdit && (
+                <div className="form-group admin-fields">
+                  <label>Admin Note (Required):</label>
+                  <textarea
+                    value={adminNote}
+                    onChange={(e) => setAdminNote(e.target.value)}
+                    placeholder="Enter reason for admin edit..."
+                    required={showAdminEdit}
+                  />
+                </div>
+              )}
+
+              {adminEditFeedback && (
+                <div className={`feedback ${adminEditFeedback.type}`}>
+                  {adminEditFeedback.message}
+                </div>
+              )}
+
+              <div className="modal-buttons">
+                <button type="submit">{showAdminEdit ? 'Save (Admin)' : 'Save'}</button>
+                <button type="button" onClick={() => {
+                  setEditingProduct(null);
+                  setShowAdminEdit(false);
+                  setAdminNote("");
+                  setAdminEditFeedback(null);
+                }}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="export-buttons">
         <h3>Export Reports</h3>
         <div className="date-filters">
@@ -526,61 +666,25 @@ const AdminPanel = () => {
           className="export-btn pdf"
           onClick={() =>
             window.open(
-              `${API_BASE_URL}/export-products/pdf?startDate=${startDate}&endDate=${endDate}`,
+              `${API_BASE_URL}/export-products/pdf?startDate=${startDate}&endDate=${endDate}&includeReturns=true`,
               "_blank"
             )
           }
         >
-          📄 Export as PDF
+          📄 Export Products & Returns as PDF
         </button>
         <button
           className="export-btn excel"
           onClick={() =>
             window.open(
-              `${API_BASE_URL}/export-products/excel?startDate=${startDate}&endDate=${endDate}`,
+              `${API_BASE_URL}/export-products/excel?startDate=${startDate}&endDate=${endDate}&includeReturns=true`,
               "_blank"
             )
           }
         >
-          📊 Export as Excel
+          📊 Export Products & Returns as Excel
         </button>
       </div>
-
-      <h3>Articles</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Article</th>
-            <th>Description</th>
-            <th>Unit</th>
-            <th>Unit Value</th>
-            <th>Balance</th>
-            <th>On Hand</th>
-            <th>Total Amount</th>
-            <th>User</th>
-            <th>Remarks</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((prod) => (
-            <tr key={prod.id}>
-              <td>{prod.article}</td>
-              <td>{prod.description}</td>
-              <td>{prod.unit}</td>
-              <td>{prod.unit_value}</td>
-              <td>{prod.balance_per_card}</td>
-              <td>{prod.on_hand_per_count}</td>
-              <td>{prod.total_amount}</td>
-              <td>{prod.actual_user || prod.userName}</td>
-              <td>{prod.remarks}</td>
-              <td>
-                <button onClick={() => handleEditProduct(prod)}>✏️ Edit</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
 
       {/* Edit popup form */}
       {editingProduct && (

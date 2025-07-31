@@ -43,27 +43,43 @@ const EmployeeAddArticle = ({ userName }) => {
     e.preventDefault();
 
     // ✅ Automatically assign the article to the logged-in employee
-    const dataToSend = { ...form, userName };
+    const dataToSend = {
+      ...form,
+      userName,
+      actual_user: userName, // Explicitly set the actual_user
+      total_amount: parseFloat(form.unit_value || 0) * parseFloat(form.balance_per_card || 0)
+    };
 
     try {
+      console.log('Sending data:', dataToSend);
       const response = await axios.post(`${API_BASE_URL}/add-product`, dataToSend);
-      alert("✅ Article added successfully!");
-      setForm({
-        article: "",
-        description: "",
-        date_acquired: "",
-        property_number: "",
-        unit: "",
-        unit_value: "",
-        balance_per_card: "",
-        on_hand_per_count: "",
-        total_amount: "",
-        remarks: "",
-      });
-      if (firstInputRef.current) firstInputRef.current.focus();
+      console.log('Response:', response.data);
+      
+      if (response.data) {
+        alert("✅ Article added successfully!");
+        // Reset form
+        setForm({
+          article: "",
+          description: "",
+          date_acquired: "",
+          property_number: "",
+          unit: "",
+          unit_value: "",
+          balance_per_card: "",
+          on_hand_per_count: "",
+          total_amount: "",
+          remarks: "",
+        });
+        if (firstInputRef.current) firstInputRef.current.focus();
+        
+        // Navigate back to employee panel to see the updated list
+        navigate("/employee");
+      } else {
+        throw new Error(response.data.message || 'Failed to add article');
+      }
     } catch (error) {
       console.error("❌ Error adding article:", error.response?.data || error.message);
-      alert("❌ Failed to add article.");
+      alert("❌ Failed to add article: " + (error.response?.data?.message || error.message));
     }
   };
 

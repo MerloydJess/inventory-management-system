@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import './EmployeePanel.css';
 import { useNavigate } from 'react-router-dom';  // ✅ Import useNavigate
@@ -18,24 +18,53 @@ const EmployeePanel = ({ userName }) => {
   const [profile, setProfile] = useState(null);
 
   // Fetch products assigned to the logged-in user
-  const fetchProducts = () => {
-    axios.get(`${API_BASE_URL}/get-products/${userName}`)
+  const fetchProducts = useCallback(() => {
+    if (!userName) {
+      console.log('No username provided');
+      return;
+    }
+
+    console.log('🔍 Fetching products for user:', userName);
+    axios.get(`${API_BASE_URL}/get-products-by-employee/${encodeURIComponent(userName)}`)
       .then(res => {
-        console.log('🟢 Fetched Products for:', userName, res.data); // ✅ Debugging
-        setProducts(res.data);
+        console.log('🟢 Fetched Products:', res.data);
+        let productsData = [];
+        
+        // Handle different response formats
+        if (Array.isArray(res.data)) {
+          productsData = res.data;
+        } else if (res.data.products) {
+          productsData = res.data.products;
+        } else if (typeof res.data === 'object') {
+          productsData = [res.data];
+        }
+        
+        console.log('📊 Setting products:', productsData.length, 'items');
+        setProducts(productsData);
       })
-      .catch(err => console.error("❌ Error fetching products:", err.response?.data || err.message));
-  };
+      .catch(err => {
+        console.error("❌ Error fetching products:", err.response?.data || err.message);
+        setProducts([]);
+        alert('Failed to load products. Please try refreshing the page.');
+      });
+  }, [userName]);
 
   useEffect(() => {
     if (userName) {
       fetchProducts();
+      
+      // Set up periodic refresh
+      const refreshInterval = setInterval(fetchProducts, 5000); // Refresh every 5 seconds
+      
       // Fetch employee profile
-      axios.get(`${API_BASE_URL}/get-employee-profile/${userName}`)
+      axios.get(`${API_BASE_URL}/get-employee-profile/${encodeURIComponent(userName)}`)
         .then(res => setProfile(res.data))
         .catch(err => console.error('❌ Error fetching profile:', err));
+        
+      // Cleanup interval on unmount
+      return () => clearInterval(refreshInterval);
     }
-  }, [userName]);
+  }, [userName, fetchProducts]);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);

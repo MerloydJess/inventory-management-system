@@ -11,6 +11,82 @@ body {
   padding-top: 80px; /* Avoids content being hidden behind header */
 }
 
+/* ===== 🔹 Admin Edit Styling ===== */
+.admin-fields {
+  background-color: #fff3e6;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+  border: 2px solid #ffd700;
+}
+
+.admin-fields label {
+  color: #ff6b00;
+  font-weight: bold;
+}
+
+.feedback {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.feedback.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.feedback.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Admin Edit button styling */
+button[onClick*="setShowAdminEdit(true)"] {
+  background-color: #ffd700;
+  color: #000;
+  margin-left: 5px;
+}
+
+button[onClick*="setShowAdminEdit(true)"]:hover {
+  background-color: #ffed4a;
+}
+
+/* Modal improvements for admin edit */
+.modal-content h2 {
+  color: #ff6b00;
+  border-bottom: 2px solid #ffd700;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.modal-content .admin-fields textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 8px;
+  border: 1px solid #ffd700;
+  border-radius: 4px;
+  resize: vertical;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-buttons button[type="submit"] {
+  background-color: #28a745;
+}
+
+.modal-buttons button[type="button"] {
+  background-color: #dc3545;
+}
+
 /* ===== 🔹 Add User Section ===== */
 .add-supervisor-section {
   background: white;

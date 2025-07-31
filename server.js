@@ -273,14 +273,23 @@ server.get('/get-products/all', async (req, res) => {
 });
 
 server.get('/get-employees', (req, res) => {
-  db.all('SELECT * FROM employee', [], (err, rows) => {
-    if (err) {
-      console.error("❌ Error fetching employees:", err);
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json(rows || []);
-  });
+  console.log("🔍 Fetching all employees");
+  db.all(`
+    SELECT e.*, 
+           COALESCE(u.role, 'employee') as role
+    FROM employee e
+    LEFT JOIN users u ON e.id = u.FK_employee
+    ORDER BY e.name ASC`, 
+    [], 
+    (err, rows) => {
+      if (err) {
+        console.error("❌ Error fetching employees:", err);
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      console.log(`✅ Found ${rows.length} employees`);
+      res.json(rows || []);
+    });
 });
 
 server.get('/get-users', (req, res) => {
@@ -877,20 +886,19 @@ server.post("/add-receipt", (req, res) => {
     secondReceivedBy = {}
   } = req.body;
 
-  // Get the user ID from the employee name (endUser)
+  // Get the employee ID directly
   db.get(
-    `SELECT u.id 
-     FROM users u 
-     JOIN employee e ON u.FK_employee = e.id 
+    `SELECT e.id 
+     FROM employee e 
      WHERE e.name = ?`,
     [endUser],
-    (err, user) => {
+    (err, employee) => {
       if (err) {
-        console.error("❌ Error finding user:", err.message);
+        console.error("❌ Error finding employee:", err.message);
         return res.status(500).json({ error: "Database error", details: err.message });
       }
-      if (!user) {
-        return res.status(400).json({ error: "User not found for the given employee" });
+      if (!employee) {
+        return res.status(400).json({ error: "Employee not found" });
       }
 
       // Log the received data for debugging
@@ -931,18 +939,41 @@ server.post("/add-receipt", (req, res) => {
           rrsp_no, date, description, quantity, ics_no, date_acquired, amount, end_user, remarks,
           returned_by, returned_by_position, returned_by_date, returned_by_location,
           received_by, received_by_position, received_by_date, received_by_location,
-          second_received_by, second_received_by_position, second_received_by_date, second_received_by_location,
-          created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          second_received_by, second_received_by_position, second_received_by_date, second_received_by_location
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
+
+      // Ensure all locations are properly formatted or null
+      const returnedLocation = returnedBy.location?.trim() || null;
+      const receivedLocation = receivedBy.location?.trim() || null;
+      const secondReceivedLocation = secondReceivedBy?.location?.trim() || null;
+
+      // Validate that locations are not just single characters
+      if (returnedLocation && returnedLocation.length < 2) {
+        return res.status(400).json({ 
+          error: "Invalid location", 
+          details: "Returned By Location must be at least 2 characters long" 
+        });
+      }
+      if (receivedLocation && receivedLocation.length < 2) {
+        return res.status(400).json({ 
+          error: "Invalid location", 
+          details: "Received By Location must be at least 2 characters long" 
+        });
+      }
+      if (secondReceivedLocation && secondReceivedLocation.length < 2) {
+        return res.status(400).json({ 
+          error: "Invalid location", 
+          details: "Second Received By Location must be at least 2 characters long" 
+        });
+      }
 
       const values = [
         rrspNo, date, description, quantity, icsNo, dateAcquired, amount, endUser, remarks || null,
-        returnedBy.name, returnedBy.position?.trim() || null, returnedBy.returnDate, returnedBy.location,
-        receivedBy.name, receivedBy.position?.trim() || null, receivedBy.receiveDate, receivedBy.location,
+        returnedBy.name, returnedBy.position?.trim() || null, returnedBy.returnDate, returnedLocation,
+        receivedBy.name, receivedBy.position?.trim() || null, receivedBy.receiveDate, receivedLocation,
         secondReceivedBy?.name?.trim() || null, secondReceivedBy?.position?.trim() || null,
-        secondReceivedBy?.receiveDate?.trim() || null, secondReceivedBy?.location || null,
-        user.id // Using the found user ID
+        secondReceivedBy?.receiveDate?.trim() || null, secondReceivedLocation
       ];
 
   db.run(sql, values, function (err) {
@@ -956,66 +987,109 @@ server.post("/add-receipt", (req, res) => {
 
 
   // 🚀 Get Products for Employee
-  server.get("/get-products/:user", (req, res) => {
+  server.get("/get-products/:user", async (req, res) => {
     const userName = decodeURIComponent(req.params.user);
     console.log("🔍 Fetching products for user:", userName);
     
-    // First verify if the employee exists and get their ID
-    db.get(
-      `SELECT e.id, e.name, e.position, e.department, 
-              (SELECT COUNT(*) FROM products WHERE FK_employee = e.id) as product_count
-       FROM employee e 
-       WHERE e.name = ?`, 
-      [userName], 
-      (err, emp) => {
-        if (err) {
-          console.error("❌ Error finding employee:", err.message);
-          return res.status(500).json({ error: "Database error", details: err.message });
-        }
-        if (!emp) {
-          console.error("❌ Employee not found:", userName);
-          return res.status(404).json({ error: "Employee not found" });
-        }
-        
-        console.log("📊 Employee found:", emp);
-        
-        db.all(
-          `SELECT p.*, e.name as employee_name 
-           FROM products p 
-           LEFT JOIN employee e ON p.FK_employee = e.id 
-           WHERE p.FK_employee = ? 
-           ORDER BY p.date_acquired DESC`,
-          [emp.id],
-          (err, results) => {
+    try {
+      // Clear any cached data to ensure fresh results
+      cache.invalidate('get-products');
+      cache.invalidate('products');
+      
+      // First verify if the employee exists and get their ID
+      db.get(
+        `SELECT e.id, e.name, e.position, e.department, e.employee_id
+         FROM employee e 
+         WHERE e.name = ? OR e.employee_id = ?`, 
+        [userName, userName], 
+        async (err, emp) => {
+          if (err) {
+            console.error("❌ Error finding employee:", err.message);
+            return res.status(500).json({ error: "Database error", details: err.message });
+          }
+          if (!emp) {
+            console.error("❌ Employee not found:", userName);
+            return res.status(404).json({ error: "Employee not found" });
+          }
+          
+          console.log("📊 Employee found:", emp);
+          
+          // Get all products for this employee with full details
+          const query = `
+            SELECT 
+              p.*,
+              e.name as employee_name,
+              e.employee_id,
+              e.position as employee_position,
+              e.department as employee_department
+            FROM products p 
+            LEFT JOIN employee e ON p.FK_employee = e.id 
+            WHERE p.FK_employee = ? 
+            ORDER BY p.date_acquired DESC NULLS LAST, p.id DESC`;
+          
+          db.all(query, [emp.id], (err, results) => {
             if (err) {
               console.error("❌ Error fetching products:", err.message);
               return res.status(500).json({ error: "Database error", details: err.message });
             }
-            console.log(`✅ Found ${results.length} products for user ${userName} (Employee ID: ${emp.id})`);
-            if (results.length === 0) {
+
+            // Ensure results is an array
+            const resultsArray = Array.isArray(results) ? results : [];
+
+            // Process the results to ensure all fields are properly formatted
+            const processedResults = resultsArray.map(row => ({
+              ...row,
+              date_acquired: row.date_acquired || null,
+              property_number: row.property_number || '',
+              unit: row.unit || '',
+              balance_per_card: row.balance_per_card || 0,
+              on_hand_per_count: row.on_hand_per_count || 0,
+              total_amount: row.total_amount || (row.unit_value * (row.balance_per_card || 0)),
+              remarks: row.remarks || '',
+              employee_name: row.employee_name || '',
+              employee_id: row.employee_id || emp.employee_id || '',
+              employee_position: row.employee_position || emp.position || '',
+              employee_department: row.employee_department || emp.department || ''
+            }));
+
+            console.log(`✅ Found ${processedResults.length} products for user ${userName} (Employee ID: ${emp.id})`);
+            if (processedResults.length === 0) {
               console.log("ℹ️ No products found for this employee");
             }
-            res.status(200).json(results);
-          }
-        );
-    });
+            res.status(200).json({ products: processedResults }); // Return as an object with products array
+          });
+      });
+    } catch (error) {
+      console.error("❌ Error in get-products:", error);
+      res.status(500).json({ error: "Server error", details: error.message });
+    }
+  });
   });
 
   // 🚀 Get Receipts for Employee
   server.get("/get-receipts/:endUser", (req, res) => {
-    console.log("🔍 Fetching receipts for user:", req.params.endUser);
+    const endUser = decodeURIComponent(req.params.endUser);
+    console.log("🔍 Fetching receipts for user:", endUser);
     
-    if (!req.params.endUser) {
+    if (!endUser) {
       console.error("❌ No endUser provided");
       return res.status(400).json({ error: "End user is required" });
     }
 
     db.all(
-      `SELECT r.*, e.name as employee_name 
+      `SELECT r.*,
+              c.name as creator_name,
+              c.position as creator_position,
+              c.department as creator_department,
+              e.name as employee_name,
+              e.position as employee_position,
+              e.department as employee_department
        FROM returns r 
-       LEFT JOIN employee e ON r.created_by = e.id 
+       LEFT JOIN users u ON r.created_by = u.id
+       LEFT JOIN employee c ON u.FK_employee = c.id
+       LEFT JOIN employee e ON e.name = r.end_user
        WHERE r.end_user = ? 
-       ORDER BY r.date DESC`,
+       ORDER BY r.date DESC, r.id DESC`,
       [req.params.endUser],
       (err, results) => {
         if (err) {
@@ -1029,90 +1103,120 @@ server.post("/add-receipt", (req, res) => {
   });
 
   server.get("/get-users", (req, res) => {
-    db.all("SELECT id, name FROM users WHERE role = 'employee'", (err, results) => {
+    db.all("SELECT id, name, role FROM users WHERE role != 'employee'", (err, results) => {
       if (err) {
         console.error("❌ Error fetching users:", err);
         return res.status(500).json({ error: "Database error", details: err.message });
       }
-      res.status(200).json(results); // ✅ Only employees are returned
+      res.status(200).json(results); // ✅ Only admin and supervisor users are returned
     });
   });
 
   // 🚀 Export Products as PDF
   server.get("/export-products/pdf", (req, res) => {
-    const { startDate, endDate } = req.query;
+  const { startDate, endDate, includeReturns } = req.query;
+  const doc = new PDFDocument();
+  
+  const filename = includeReturns === 'true' ? 'inventory_and_returns_report.pdf' : 'inventory_report.pdf';
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Type', 'application/pdf');
+  doc.pipe(res);
 
-    // Validate date parameters
-    if (!startDate || !endDate) {
-      return res.status(400).json({ error: "Start date and end date are required" });
+  // Products section
+  doc.fontSize(20).text('Inventory Report', { align: 'center' });
+  doc.moveDown();
+
+  const productsSql = `
+    SELECT products.*, employee.name AS employee_name
+    FROM products
+    LEFT JOIN employee ON products.FK_employee = employee.id
+    WHERE date_acquired BETWEEN ? AND ?
+  `;
+
+  db.all(productsSql, [startDate, endDate], (err, products) => {
+    if (err) {
+      console.error("Error fetching products:", err);
+      return res.status(500).send("Error generating report");
     }
 
-    // Validate date format
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
-      return res.status(400).json({ error: "Dates must be in YYYY-MM-DD format" });
-    }
+    // Add products table
+    if (products.length > 0) {
+      // Add table headers
+      const productsTable = {
+        title: "Products",
+        headers: ['Article', 'Description', 'Unit', 'Value', 'Balance', 'On Hand', 'User'],
+        rows: products.map(p => [
+          p.article,
+          p.description,
+          p.unit,
+          `₱${Number(p.unit_value).toLocaleString()}`,
+          p.balance_per_card,
+          p.on_hand_per_count,
+          p.employee_name
+        ])
+      };
 
-    // Validate date range
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return res.status(400).json({ error: "Invalid date format" });
-    }
-    if (end < start) {
-      return res.status(400).json({ error: "End date must be after start date" });
-    }
-
-    const doc = new PDFDocument();
-
-    res.setHeader("Content-Disposition", 'attachment; filename="products_report.pdf"');
-    res.setHeader("Content-Type", "application/pdf");
-
-    doc.pipe(res);
-    doc.fontSize(18).text("Inventory Report", { align: "center" });
-    doc.moveDown();
-
-    let sql = "SELECT * FROM products WHERE date_acquired BETWEEN ? AND ?";
-    db.all(sql, [startDate, endDate], (err, rows) => {
-      if (err) {
-        console.error("❌ PDF Export Error:", err);
-        return res.status(500).send("Error exporting PDF");
-      }
-
-      rows.forEach((product, index) => {
-        doc.fontSize(12).text(
-          `${index + 1}. ${product.article} - ${product.description} (${product.unit}) - ₱${product.unit_value}`
-        );
+      doc.table(productsTable, {
+        prepareHeader: () => doc.font('Helvetica-Bold').fontSize(10),
+        prepareRow: () => doc.font('Helvetica').fontSize(10)
       });
+    }
 
+    // If includeReturns is true, add returns section
+    if (includeReturns === 'true') {
+      const returnsSql = `
+        SELECT r.*, e.name as employee_name
+        FROM returns r
+        LEFT JOIN employee e ON r.end_user = e.name
+        WHERE r.date BETWEEN ? AND ?
+      `;
+
+      db.all(returnsSql, [startDate, endDate], (returnErr, returns) => {
+        if (returnErr) {
+          console.error("Error fetching returns:", returnErr);
+          doc.end();
+          return;
+        }
+
+        if (returns.length > 0) {
+          doc.addPage();
+          doc.fontSize(20).text('Returns Report', { align: 'center' });
+          doc.moveDown();
+
+          const returnsTable = {
+            title: "Returns",
+            headers: ['RRSP No', 'Date', 'Description', 'Quantity', 'Amount', 'End User'],
+            rows: returns.map(r => [
+              r.rrsp_no,
+              new Date(r.date).toLocaleDateString(),
+              r.description,
+              r.quantity,
+              `₱${Number(r.amount).toLocaleString()}`,
+              r.employee_name
+            ])
+          };
+
+          doc.table(returnsTable, {
+            prepareHeader: () => doc.font('Helvetica-Bold').fontSize(10),
+            prepareRow: () => doc.font('Helvetica').fontSize(10)
+          });
+        }
+        doc.end();
+      });
+    } else {
       doc.end();
-    });
+    }
   });
-
-  server.delete("/delete-user/:id", (req, res) => {
-    const { id } = req.params;
-  
-    db.run(`DELETE FROM users WHERE id = ?`, [id], function (err) {
-      if (err) {
-        console.error("❌ Error deleting user:", err.message);
-        return res.status(500).json({ error: "Failed to delete user", details: err.message });
-      }
-  
-      if (this.changes === 0) {
-        return res.status(404).json({ error: "User not found" });
-      }
-  
-      res.status(200).json({ message: "✅ User deleted successfully" });
-    });
-  });
+});
   
   
-  server.get("/export-products/excel", (req, res) => {
-  const { startDate, endDate } = req.query;
+ server.get("/export-products/excel", (req, res) => {
+  const { startDate, endDate, includeReturns } = req.query;
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Products Report");
-
-  worksheet.columns = [
+  
+  // Products worksheet
+  const productsSheet = workbook.addWorksheet("Products Report");
+  productsSheet.columns = [
     { header: "ID", key: "id", width: 5 },
     { header: "Article", key: "article", width: 20 },
     { header: "Description", key: "description", width: 30 },
@@ -1121,63 +1225,196 @@ server.post("/add-receipt", (req, res) => {
     { header: "Balance Per Card", key: "balance_per_card", width: 20 },
     { header: "On Hand", key: "on_hand_per_count", width: 15 },
     { header: "Total Amount", key: "total_amount", width: 15 },
-    { header: "Actual User", key: "employee_name", width: 20 }, // changed key
+    { header: "Actual User", key: "employee_name", width: 20 }
   ];
 
-  // Join with employee table
-  let sql = `
+  // Products query
+  const productsSql = `
     SELECT products.*, employee.name AS employee_name
     FROM products
     LEFT JOIN employee ON products.FK_employee = employee.id
     WHERE date_acquired BETWEEN ? AND ?
   `;
-    db.all(sql, [startDate, endDate], async (err, rows) => {
-      if (err) {
-        console.error("❌ Excel Export Error:", err);
-        return res.status(500).send("Error exporting Excel");
-      }
-  
-      rows.forEach((row) => {
-        worksheet.addRow(row);
+
+  // Execute products query
+  db.all(productsSql, [startDate, endDate], (err, products) => {
+    if (err) {
+      console.error("Error fetching products:", err);
+      return res.status(500).send("Error generating report");
+    }
+
+    // Add products data
+    productsSheet.addRows(products);
+
+    // If includeReturns is true, add returns worksheet
+    if (includeReturns === 'true') {
+      const returnsSheet = workbook.addWorksheet("Returns Report");
+      returnsSheet.columns = [
+        { header: "RRSP No", key: "rrsp_no", width: 15 },
+        { header: "Date", key: "date", width: 12 },
+        { header: "Description", key: "description", width: 30 },
+        { header: "Quantity", key: "quantity", width: 10 },
+        { header: "Amount", key: "amount", width: 15 },
+        { header: "End User", key: "end_user", width: 20 },
+        { header: "Returned By", key: "returned_by", width: 20 },
+        { header: "Received By", key: "received_by", width: 20 }
+      ];
+
+      // Returns query
+      const returnsSql = `
+        SELECT r.*, e.name as employee_name
+        FROM returns r
+        LEFT JOIN employee e ON r.end_user = e.name
+        WHERE r.date BETWEEN ? AND ?
+      `;
+
+      // Execute returns query
+      db.all(returnsSql, [startDate, endDate], (returnErr, returns) => {
+        if (returnErr) {
+          console.error("Error fetching returns:", returnErr);
+          return res.status(500).send("Error generating report");
+        }
+
+        // Add returns data
+        returnsSheet.addRows(returns);
+
+        // Send the workbook
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=inventory_and_returns_report.xlsx');
+        
+        workbook.xlsx.write(res)
+          .then(() => {
+            res.end();
+          })
+          .catch(err => {
+            console.error("Error writing excel:", err);
+            res.status(500).send("Error generating excel file");
+          });
       });
-  
-      res.setHeader("Content-Disposition", 'attachment; filename="products_report.xlsx"');
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-  
-      await workbook.xlsx.write(res);
-      res.end();
-    });
+    } else {
+      // Send only products workbook
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=inventory_report.xlsx');
+      
+      workbook.xlsx.write(res)
+        .then(() => {
+          res.end();
+        })
+        .catch(err => {
+          console.error("Error writing excel:", err);
+          res.status(500).send("Error generating excel file");
+        });
+    }
   });
+});
   
   
   
     // 🚀 Get ALL articles (For Supervisor View)
-    server.get("/api/products/all", (req, res) => {
-    db.all(`
-      SELECT p.*, e.name as employee_name 
-      FROM products p
-      LEFT JOIN employee e ON p.FK_employee = e.id
-      ORDER BY p.date_acquired DESC`, [], (err, rows) => {
-      if (err) {
-        console.error("❌ Error fetching articles:", err.message);
-        return res.status(500).json({ error: "Database error", details: err.message });
-      }
-      console.log("✅ Supervisor Viewing Articles:", rows.length, "articles found.");
-      res.status(200).json(rows);
-    });
+    server.get("/api/products/all", async (req, res) => {
+    console.log("🔍 Fetching all products for supervisor view");
+    
+    try {
+      // First clear any cached data to ensure fresh results
+      cache.invalidate('products');
+      cache.invalidate('get-products');
+      cache.invalidate('api/products');
+
+      const query = `
+        SELECT 
+          p.*,
+          e.name as employee_name,
+          e.employee_id,
+          e.position as employee_position,
+          e.department as employee_department,
+          e.email as employee_email,
+          e.contact_number as employee_contact,
+          e.address as employee_address,
+          COALESCE(e.name, '') as actual_user
+        FROM products p
+        LEFT JOIN employee e ON p.FK_employee = e.id
+        ORDER BY p.date_acquired DESC NULLS LAST, p.id DESC`;
+      
+      db.all(query, [], (err, rows) => {
+        if (err) {
+          console.error("❌ Error fetching articles:", err.message);
+          return res.status(500).json({ error: "Database error", details: err.message });
+        }
+
+        // Process the rows to ensure all fields are properly formatted
+        const processedRows = rows.map(row => ({
+          ...row,
+          date_acquired: row.date_acquired || null,
+          property_number: row.property_number || '',
+          unit: row.unit || '',
+          balance_per_card: row.balance_per_card || 0,
+          on_hand_per_count: row.on_hand_per_count || 0,
+          total_amount: row.total_amount || 0,
+          remarks: row.remarks || '',
+          employee_name: row.employee_name || '',
+          employee_id: row.employee_id || '',
+          employee_position: row.employee_position || '',
+          employee_department: row.employee_department || '',
+          employee_email: row.employee_email || '',
+          employee_contact: row.employee_contact || '',
+          employee_address: row.employee_address || ''
+        }));
+
+        console.log(`✅ Found ${processedRows.length} articles`);
+        res.status(200).json(processedRows);
+      });
+    } catch (error) {
+      console.error("❌ Error in /api/products/all:", error);
+      res.status(500).json({ error: "Server error", details: error.message });
+    }
   });
 
 
 
   // 🚀 Get ALL receipts (For Supervisor View)
   server.get("/api/returns/all", (req, res) => {
-    db.all("SELECT * FROM returns", [], (err, rows) => {
+    console.log("🔍 Fetching all returns for supervisor view");
+    const query = `
+      SELECT 
+        r.*,
+        e.name as creator_name,
+        e.position as creator_position,
+        e.department as creator_department,
+        e.employee_id as creator_employee_id,
+        e.email as creator_email,
+        e.contact_number as creator_contact,
+        e.address as creator_address,
+        eu.name as end_user_name,
+        eu.position as end_user_position,
+        eu.department as end_user_department,
+        eu.employee_id as end_user_employee_id,
+        eu.email as end_user_email,
+        eu.contact_number as end_user_contact,
+        eu.address as end_user_address
+      FROM returns r
+      LEFT JOIN users u ON r.created_by = u.id
+      LEFT JOIN employee e ON u.FK_employee = e.id
+      LEFT JOIN employee eu ON r.end_user = eu.name
+      ORDER BY r.date DESC, r.id DESC`;
+    
+    db.all(query, [], (err, rows) => {
       if (err) {
         console.error("❌ Error fetching receipts:", err.message);
         return res.status(500).json({ error: "Database error", details: err.message });
       }
       console.log("✅ Supervisor Viewing Receipts:", rows.length, "receipts found.");
-      res.status(200).json(rows);
+      
+      // Map rows to ensure location fields are properly set
+      const processedRows = rows.map(row => ({
+        ...row,
+        returned_by_location: row.returned_by_location || '',
+        received_by_location: row.received_by_location || '',
+        second_received_by_location: row.second_received_by_location || ''
+      }));
+      
+      // Clear any cached data to ensure fresh results
+      cache.invalidate('returns');
+      res.status(200).json(processedRows);
     });
   });
 
@@ -1250,6 +1487,24 @@ server.post("/add-employee", (req, res) => {
   });
 });
 
+// Get all employees for dropdowns (no pagination)
+server.get("/get-all-employees", (req, res) => {
+  db.all(
+    `SELECT e.*, COALESCE(u.role, 'employee') as role
+     FROM employee e
+     LEFT JOIN users u ON e.id = u.FK_employee
+     ORDER BY e.name ASC`,
+    [],
+    (err, rows) => {
+      if (err) {
+        console.error("❌ Error fetching all employees:", err.message);
+        return res.status(500).json({ error: "Database error", details: err.message });
+      }
+      res.json(rows || []);
+    }
+  );
+});
+
 // Get all employees with proper error handling and pagination
 server.get("/get-employees", (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -1287,11 +1542,13 @@ server.get("/get-employees", (req, res) => {
 
 // Get employee profile by name
 server.get("/get-employee-profile/:name", (req, res) => {
-  const employeeName = req.params.name;
+  const employeeName = decodeURIComponent(req.params.name);
+  console.log("🔍 Fetching profile for employee:", employeeName);
+  
   db.get(
-    `SELECT e.*, u.role 
-     FROM employee e 
-     LEFT JOIN users u ON e.id = u.FK_employee 
+    `SELECT e.*, u.role, u.id as user_id
+     FROM employee e
+     LEFT JOIN users u ON e.id = u.FK_employee
      WHERE e.name = ?`,
     [employeeName],
     (err, employee) => {
@@ -1300,24 +1557,103 @@ server.get("/get-employee-profile/:name", (req, res) => {
         return res.status(500).json({ error: "Database error", details: err.message });
       }
       if (!employee) {
+        console.error("❌ Employee not found:", employeeName);
         return res.status(404).json({ error: "Employee not found" });
       }
+      console.log("✅ Found employee profile:", employee);
       res.json(employee);
     }
   );
 });
 
-// Edit employee
-server.put("/edit-employee/:id", (req, res) => {
-  const { name, position, department, email, contact_number, address } = req.body;
-  db.run(
-    `UPDATE employee SET name=?, position=?, department=?, email=?, contact_number=?, address=? WHERE id=?`,
-    [name, position, department, email, contact_number, address, req.params.id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ message: "Employee updated" });
-    }
-  );
+// Edit employee profile
+server.put("/edit-employee-profile/:id", (req, res) => {
+  const { id } = req.params;
+  const { 
+    name, 
+    position, 
+    department, 
+    email, 
+    contact_number, 
+    address 
+  } = req.body;
+
+  console.log("📝 Updating employee profile:", { id, ...req.body });
+
+  // Validate required fields
+  if (!name || !position || !department) {
+    return res.status(400).json({ 
+      error: "Missing required fields",
+      details: "Name, position, and department are required"
+    });
+  }
+
+  // Email format validation
+  if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    return res.status(400).json({ 
+      error: "Invalid email format"
+    });
+  }
+
+  db.serialize(() => {
+    // First update the employee table
+    db.run(
+      `UPDATE employee 
+       SET name = ?, 
+           position = ?, 
+           department = ?, 
+           email = ?, 
+           contact_number = ?, 
+           address = ?
+       WHERE id = ?`,
+      [name, position, department, email, contact_number, address, id],
+      function(err) {
+        if (err) {
+          console.error("❌ Error updating employee:", err.message);
+          return res.status(500).json({ error: "Failed to update employee", details: err.message });
+        }
+        if (this.changes === 0) {
+          return res.status(404).json({ error: "Employee not found" });
+        }
+
+        // Then update the associated user record if it exists
+        db.run(
+          `UPDATE users 
+           SET name = ? 
+           WHERE FK_employee = ?`,
+          [name, id],
+          function(err) {
+            if (err) {
+              console.error("❌ Error updating associated user:", err.message);
+              // Don't return error here as the employee update was successful
+            }
+            
+            // Return the updated profile
+            db.get(
+              `SELECT e.*, u.role 
+               FROM employee e
+               LEFT JOIN users u ON e.id = u.FK_employee
+               WHERE e.id = ?`,
+              [id],
+              (err, updated) => {
+                if (err) {
+                  console.error("❌ Error fetching updated profile:", err.message);
+                  return res.status(200).json({ 
+                    message: "Profile updated but unable to fetch updated data"
+                  });
+                }
+                console.log("✅ Employee profile updated successfully");
+                res.json({ 
+                  message: "Employee profile updated successfully",
+                  profile: updated
+                });
+              }
+            );
+          }
+        );
+      }
+    );
+  });
 });
 
 // Delete employee
@@ -1358,8 +1694,15 @@ server.get("/get-returns-by-employee/:employeeId", (req, res) => {
   );
 });
 
-// 🚀 Edit Product (Article)
-server.put("/edit-product/:id", (req, res) => {
+// 🚀 Edit Product (Article) - Admin version
+server.put("/admin/edit-product/:id", (req, res) => {
+  console.log("📝 Admin editing product:", req.params.id, req.body);
+
+  // Add admin-specific validation
+  if (!req.body.adminNote) {
+    console.log("ℹ️ No admin note provided");
+  }
+  
   const {
     article,
     description,
@@ -1371,7 +1714,7 @@ server.put("/edit-product/:id", (req, res) => {
     on_hand_per_count,
     total_amount,
     remarks,
-    FK_employee // optional: allow changing assigned employee
+    actual_user // use actual_user instead of FK_employee for better clarity
   } = req.body;
 
   // Validate required fields
@@ -1386,17 +1729,24 @@ server.put("/edit-product/:id", (req, res) => {
     });
   }
 
-  // Validate numeric fields
-  if (isNaN(parseFloat(unit_value))) {
+  // Validate numeric fields and convert to numbers
+  const numericUnitValue = parseFloat(unit_value);
+  if (isNaN(numericUnitValue)) {
     return res.status(400).json({ error: "Unit value must be a valid number" });
   }
-  if (balance_per_card && isNaN(parseInt(balance_per_card))) {
+  
+  const numericBalancePerCard = balance_per_card ? parseInt(balance_per_card) : 0;
+  if (balance_per_card && isNaN(numericBalancePerCard)) {
     return res.status(400).json({ error: "Balance per card must be a valid number" });
   }
-  if (on_hand_per_count && isNaN(parseInt(on_hand_per_count))) {
+  
+  const numericOnHandPerCount = on_hand_per_count ? parseInt(on_hand_per_count) : 0;
+  if (on_hand_per_count && isNaN(numericOnHandPerCount)) {
     return res.status(400).json({ error: "On hand per count must be a valid number" });
   }
-  if (total_amount && isNaN(parseFloat(total_amount))) {
+  
+  const numericTotalAmount = total_amount ? parseFloat(total_amount) : (numericUnitValue * numericBalancePerCard);
+  if (total_amount && isNaN(numericTotalAmount)) {
     return res.status(400).json({ error: "Total amount must be a valid number" });
   }
 
@@ -1405,46 +1755,105 @@ server.put("/edit-product/:id", (req, res) => {
     return res.status(400).json({ error: "Date acquired must be in YYYY-MM-DD format" });
   }
 
-  db.run(
-    `UPDATE products SET
-      article = ?,
-      description = ?,
-      date_acquired = ?,
-      property_number = ?,
-      unit = ?,
-      unit_value = ?,
-      balance_per_card = ?,
-      on_hand_per_count = ?,
-      total_amount = ?,
-      remarks = ?,
-      FK_employee = ?
-    WHERE id = ?`,
-    [
-      article,
-      description,
-      date_acquired,
-      property_number,
-      unit,
-      unit_value,
-      balance_per_card,
-      on_hand_per_count,
-      total_amount,
-      remarks,
-      FK_employee,
-      req.params.id
-    ],
-    function (err) {
-      if (err) {
-        console.error("❌ Error updating product:", err.message);
-        return res.status(500).json({ error: "Database error", details: err.message });
+  // Function to update the product
+  const updateProduct = (employeeId) => {
+    console.log("✏️ Updating product with employeeId:", employeeId);
+    db.run(
+      `UPDATE products SET
+        article = ?,
+        description = ?,
+        date_acquired = ?,
+        property_number = ?,
+        unit = ?,
+        unit_value = ?,
+        balance_per_card = ?,
+        on_hand_per_count = ?,
+        total_amount = ?,
+        remarks = ?,
+        FK_employee = ?
+      WHERE id = ?`,
+      [
+        article,
+        description || null,
+        date_acquired || null,
+        property_number || null,
+        unit || null,
+        numericUnitValue,
+        numericBalancePerCard,
+        numericOnHandPerCount,
+        numericTotalAmount,
+        remarks || null,
+        employeeId,
+        req.params.id
+      ],
+      function(err) {
+        if (err) {
+          console.error("❌ Error updating product:", err.message);
+          return res.status(500).json({ error: "Database error", details: err.message });
+        }
+
+        // Invalidate relevant caches
+        cache.invalidate('get-products');
+        cache.invalidate('products/all');
+        cache.invalidate('api/products');
+
+        res.status(200).json({ 
+          message: "✅ Product updated successfully",
+          product: {
+            id: req.params.id,
+            article,
+            description,
+            date_acquired,
+            property_number,
+            unit,
+            unit_value: numericUnitValue,
+            balance_per_card: numericBalancePerCard,
+            on_hand_per_count: numericOnHandPerCount,
+            total_amount: numericTotalAmount,
+            remarks,
+            FK_employee: employeeId
+          }
+        });
       }
-      res.status(200).json({ message: "✅ Product updated successfully" });
-    }
-  );
+    );
+  };
+
+  // If actual_user is provided, look up the employee ID
+  if (actual_user) {
+    db.get(
+      "SELECT id FROM employee WHERE name = ?",
+      [actual_user],
+      (err, employee) => {
+        if (err) {
+          console.error("❌ Error finding employee:", err.message);
+          return res.status(500).json({ error: "Database error", details: err.message });
+        }
+        if (!employee) {
+          return res.status(400).json({ error: "Employee not found" });
+        }
+        updateProduct(employee.id);
+      }
+    );
+  } else {
+    // If no actual_user provided, use the product's current employee
+    db.get(
+      "SELECT FK_employee FROM products WHERE id = ?",
+      [req.params.id],
+      (err, product) => {
+        if (err) {
+          console.error("❌ Error getting current product:", err.message);
+          return res.status(500).json({ error: "Database error", details: err.message });
+        }
+        updateProduct(product ? product.FK_employee : null);
+      }
+    );
+  }
 });
 
-// 🚀 Edit Return
-server.put("/edit-return/:id", (req, res) => {
+// 🚀 Edit Return - Admin version
+server.put("/admin/edit-return/:id", (req, res) => {
+  console.log("📝 Admin editing return:", req.params.id);
+  
   const {
     rrsp_no, date, description, quantity, ics_no, date_acquired, amount, end_user, remarks,
     returned_by, returned_by_position, returned_by_date, returned_by_location,
@@ -1474,7 +1883,19 @@ server.put("/edit-return/:id", (req, res) => {
         console.error("❌ Error updating return:", err.message);
         return res.status(500).json({ error: "Database error", details: err.message });
       }
-      res.status(200).json({ message: "✅ Return updated successfully" });
+      
+      // Add admin audit log
+      const auditLog = {
+        action: "admin_edit_return",
+        returnId: req.params.id,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log("📝 Admin audit log:", auditLog);
+      res.status(200).json({ 
+        message: "✅ Return updated successfully by admin",
+        auditLog
+      });
     }
   );
 });
@@ -1539,4 +1960,3 @@ server.put("/edit-user/:id", (req, res) => {
     );
   }
 });
-}); // Close db.serialize

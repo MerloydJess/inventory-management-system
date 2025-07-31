@@ -215,13 +215,13 @@
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  color: #000000;
   font-size: 1rem;
   transition: all 0.3s ease;
 }
 
 .login-form input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgb(133, 133, 133);
 }
 
 .login-form input:focus {

@@ -8,7 +8,11 @@ import React, { useState, useEffect, useRef } from "react";
     const [users, setUsers] = useState([]);
     const [showSecondReceiver, setShowSecondReceiver] = useState(false);
     const navigate = useNavigate();
-    const [returns, setReturns] = useState([]);
+
+    const goToReturnsManagement = () => {
+      navigate('/manage-returns');
+    };
+
     const [form, setForm] = useState({
       rrspNo: "",
       date: "",
@@ -26,15 +30,23 @@ import React, { useState, useEffect, useRef } from "react";
     const [editingReturn, setEditingReturn] = useState(null);
     const firstInputRef = useRef(null);
 
-    // ✅ Fetch users from backend
+    // ✅ Fetch employees list
     useEffect(() => {
-      fetch(`${API_BASE_URL}/get-users`)
-        .then((res) => res.json())
-        .then((data) => {
-          const filteredUsers = Array.isArray(data) ? data.filter(user => user.role !== "admin") : [];
-          setUsers(filteredUsers); // ✅ Set only employees & supervisors
-        })
-        .catch((err) => console.error("❌ Error fetching users:", err));
+      const fetchEmployees = async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/get-employees`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          setUsers(Array.isArray(data) ? data : []); // Store employees in users state
+        } catch (err) {
+          console.error("❌ Error fetching employees:", err);
+          alert("Failed to load employees. Please refresh the page.");
+        }
+      };
+
+      fetchEmployees();
     }, []);
     
 
@@ -80,7 +92,6 @@ import React, { useState, useEffect, useRef } from "react";
 
         if (response.ok) {
           alert("✅ Receipt added successfully!");
-          setReturns([...returns, form]); // ✅ Update state
           // ✅ Reset form
           setForm({
             rrspNo: "",
@@ -107,41 +118,21 @@ import React, { useState, useEffect, useRef } from "react";
       }
     };
 
-    const handleEditReturn = (ret) => {
-      setEditingReturn(ret);
-    };
 
-    const handleEditReturnChange = (e) => {
-      setEditingReturn({ ...editingReturn, [e.target.name]: e.target.value });
-    };
-
-    const handleEditReturnSubmit = (e) => {
-      e.preventDefault();
-      fetch(`${API_BASE_URL}/edit-return/${editingReturn.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingReturn),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          alert("✅ Return updated!");
-          setEditingReturn(null);
-          // Optionally refetch returns here
-        })
-        .catch((err) => {
-          console.error("❌ Error updating return:", err);
-          alert("❌ Error updating return! Check console.");
-        });
-    };
-    
-    
 
     return (
       <div className="returns-panel">
-        <h2>RECEIPT OF RETURNED SEMI-EXPENDABLE PROPERTY</h2>
-        <button className="back-btn" onClick={() => navigate("/")}>
-          ← Back to Adding Article
-        </button>
+        <div className="header-buttons">
+          <h2>RECEIPT OF RETURNED SEMI-EXPENDABLE PROPERTY</h2>
+          <div className="button-group">
+            <button className="manage-returns-btn" onClick={goToReturnsManagement}>
+              Manage Returns
+            </button>
+            <button className="back-btn" onClick={() => navigate("/")}>
+              ← Back to Adding Article
+            </button>
+          </div>
+        </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>RRSP No.</label>
@@ -172,15 +163,17 @@ import React, { useState, useEffect, useRef } from "react";
             <input type="number" name="amount" value={form.amount} onChange={handleChange} required />
           </div>
           <div className="form-group">
-            <label>End User</label>
-            <select name="endUser" value={form.endUser} onChange={handleChange} required>
-              <option value="">Select End-User</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.name}>
-                  {user.name}
-                </option>
-              ))}
-            </select>
+            <label>Select Employee</label>
+            <div className="user-select">
+              <select name="endUser" value={form.endUser} onChange={handleChange} required>
+                <option value="">Select Employee</option>
+                {users.map((emp) => (
+                  <option key={emp.id} value={emp.name}>
+                    {emp.name} ({emp.position || 'No Position'})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="form-group">
             <label>Remarks</label>
@@ -229,46 +222,6 @@ import React, { useState, useEffect, useRef } from "react";
 
           <button type="submit">Add Entry</button>
         </form>
-
-        {/* Returns List */}
-        <h3>Returns</h3>
-        <div className="returns-list">
-          {returns.map((ret, idx) => (
-            <div className="return-bubble" key={ret.id || idx}>
-              <div className="return-main">
-                <strong>RRSP No.:</strong> {ret.rrspNo} <br />
-                <strong>Date:</strong> {ret.date} <br />
-                <strong>Article:</strong> {ret.description}
-                <button
-                  className="view-details-btn"
-                  onClick={() => setEditingReturn(ret)}
-                  style={{ marginLeft: 12 }}
-                >
-                  See More Details
-                </button>
-              </div>
-              {editingReturn === ret && (
-                <div className="return-details">
-                  <div><strong>Quantity:</strong> {ret.quantity}</div>
-                  <div><strong>ICS No.:</strong> {ret.icsNo}</div>
-                  <div><strong>Date Acquired:</strong> {ret.dateAcquired}</div>
-                  <div><strong>Amount:</strong> ₱{parseFloat(ret.amount).toFixed(2)}</div>
-                  <div><strong>End User:</strong> {ret.endUser}</div>
-                  <div><strong>Remarks:</strong> {ret.remarks}</div>
-                  <div><strong>Returned By:</strong> {ret.returnedBy?.name}</div>
-                  <div><strong>Returned By Position:</strong> {ret.returnedBy?.position}</div>
-                  <div><strong>Returned By Date:</strong> {ret.returnedBy?.returnDate}</div>
-                  <div><strong>Returned By Location:</strong> {ret.returnedBy?.location}</div>
-                  <div><strong>Received By:</strong> {ret.receivedBy?.name}</div>
-                  <div><strong>Received By Position:</strong> {ret.receivedBy?.position}</div>
-                  <div><strong>Received By Date:</strong> {ret.receivedBy?.receiveDate}</div>
-                  <div><strong>Received By Location:</strong> {ret.receivedBy?.location}</div>
-                  <button onClick={() => setEditingReturn(null)} style={{marginTop:8}}>Hide Details</button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
 
         {/* Edit popup form */}
         {editingReturn && (

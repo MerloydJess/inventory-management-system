@@ -15,9 +15,41 @@
     box-shadow: 0px 6px 18px rgba(0, 0, 0, 0.2);
 }
 
-/* 🎯 Headings */
+/* Header Layout */
+.header-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.button-group {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
 .returns-panel h2 {
-    text-align: center;
+    margin: 0;
+    color: #333;
+}
+
+.manage-returns-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s;
+}
+
+.manage-returns-btn:hover {
+    background-color: #0056b3;
+
     color: #222;
     font-size: 22px;
     margin-bottom: 18px;
@@ -57,6 +89,60 @@
     color: #333;
     background: #fff;
     transition: 0.3s ease-in-out;
+}
+
+/* 👤 User Select Styling */
+.user-select select {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 2px solid #007bff;
+    border-radius: 6px;
+    font-size: 15px;
+    color: #333;
+    background: #f8f9fa;
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+}
+
+.user-select select:focus {
+    border-color: #0056b3;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    background: #fff;
+    outline: none;
+}
+
+.user-select select option {
+    padding: 12px;
+    background: #fff;
+    color: #333;
+}
+
+/* 👤 Employee Select Styling */
+.employee-select {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 2px solid #007bff;
+    border-radius: 6px;
+    font-size: 15px;
+    color: #333;
+    background: #f8f9fa;
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+}
+
+.employee-select:focus {
+    border-color: #0056b3;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    background: #fff;
+    outline: none;
+}
+
+.employee-select option {
+    padding: 12px;
+    font-size: 15px;
+    background: #fff;
 }
 
 /* 🔹 Focus Effect */

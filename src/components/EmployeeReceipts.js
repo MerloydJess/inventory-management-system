@@ -10,13 +10,22 @@ const EmployeeReceipts = ({ userName }) => {
 
   // ✅ Fetch receipts assigned to the logged-in user
   useEffect(() => {
-    fetch(`${API_BASE_URL}/get-returns-by-employee/${userName}`)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("✅ Fetched Receipts:", data); // ✅ Debugging log
-        setReceipts(data);
+    if (!userName) return;
+    
+    console.log("🔍 Fetching receipts for:", userName);
+    fetch(`${API_BASE_URL}/get-receipts/${encodeURIComponent(userName)}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
       })
-      .catch((err) => console.error("❌ Error fetching receipts:", err));
+      .then((data) => {
+        console.log("✅ Fetched Receipts:", data);
+        setReceipts(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        console.error("❌ Error fetching receipts:", err);
+        setReceipts([]);
+      });
   }, [userName]);
 
   // ✅ Filter receipts based on search term
