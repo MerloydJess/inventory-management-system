@@ -1,0 +1,208 @@
+.supervisor-receipts {
+  width: 95%;
+  max-width: 1800px;
+  margin: 20px auto;
+  padding: 25px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(30, 60, 114, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow-x: auto;
+}
+
+/* ✅ Enhanced Title & Search */
+.supervisor-receipts h2 {
+  text-align: center;
+  color: #1e3c72;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 25px;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.supervisor-receipts input {
+  width: 100%;
+  padding: 15px 20px;
+  margin-bottom: 25px;
+  border: 2px solid rgba(102, 126, 234, 0.2);
+  border-radius: 12px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.supervisor-receipts input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: white;
+}
+
+/* ✅ Enhanced Receipt List */
+.receipt-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 25px;
+}
+
+/* ✅ Modern Receipt Bubble */
+.receipt-bubble {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.receipt-bubble::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  transition: width 0.3s ease;
+}
+
+.receipt-bubble:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.receipt-bubble:hover::before {
+  width: 8px;
+}
+
+/* ✅ Table Adjustments */
+.supervisor-receipts table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 14px;
+}
+
+/* ✅ Table Headers */
+.supervisor-receipts th {
+  background: #007bff;
+  color: white;
+  padding: 12px;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* ✅ Table Cells */
+.supervisor-receipts td {
+  padding: 10px;
+  text-align: center;
+  border: 1px solid #ddd;
+  white-space: nowrap; /* ✅ Prevents text wrapping */
+}
+
+/* ✅ Alternate Row Colors */
+.supervisor-receipts tbody tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.supervisor-receipts tbody tr:hover {
+  background: #e6f7ff;
+}
+
+/* Receipt List Styles */
+.receipt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.receipt-bubble {
+  background: #f8f9fa;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  padding: 18px 22px;
+  transition: box-shadow 0.2s;
+  border: 1px solid #e0e0e0;
+}
+
+.receipt-bubble:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+}
+
+.receipt-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.receipt-main > div {
+  min-width: 160px;
+  font-size: 16px;
+}
+
+.view-details-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 18px;
+  font-size: 15px;
+  cursor: pointer;
+  margin-left: 12px;
+  transition: background 0.2s;
+}
+.view-details-btn:hover {
+  background: #0056b3;
+}
+
+.receipt-details {
+  margin-top: 16px;
+  padding: 12px 10px 0 10px;
+  border-top: 1px solid #d0d0d0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-size: 15px;
+}
+
+.receipt-details > div {
+  min-width: 200px;
+  margin-bottom: 6px;
+}
+
+/* 📱 Responsive */
+@media (max-width: 1024px) {
+  .supervisor-receipts {
+      width: 95%;
+      padding: 10px;
+  }
+  
+  .supervisor-receipts table {
+      font-size: 12px;
+  }
+
+  .supervisor-receipts th, .supervisor-receipts td {
+      padding: 8px;
+  }
+}
+
+@media (max-width: 700px) {
+  .receipt-main, .receipt-details {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .receipt-bubble {
+    padding: 12px 8px;
+  }
+}

@@ -3,91 +3,462 @@ const { spawn } = require("child_process");
 const http = require('http');
 const path = require("path");
 const fs = require("fs");
-const isDev = !app.isPackaged;
+
+// More reliable isDev detection
+const isDev = (
+  !app.isPackaged && 
+  process.env.NODE_ENV !== 'production' &&
+  !__dirname.includes('resources\\app')
+);
+
+// Create log file for debugging
+const logFile = path.join(app.getPath('userData'), 'backend-startup.log');
+const logStream = fs.createWriteStream(logFile, { flags: 'w' });
+
+function log(...args) {
+  const message = args.join(' ');
+  console.log(...args);
+  logStream.write(`[${new Date().toISOString()}] ${message}\n`);
+}
+
+log('='.repeat(80));
+log('ELECTRON MAIN PROCESS STARTING');
+log('='.repeat(80));
+log('Log file location:', logFile);
+log('Is Dev:', isDev);
+log('Is Packaged:', app.isPackaged);
+log('__dirname:', __dirname);
+log('process.resourcesPath:', process.resourcesPath || 'undefined');
+log('='.repeat(80));
+
+// ⚡ SINGLE INSTANCE LOCK - Prevent multiple instances IMMEDIATELY
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  console.log("❌ Another instance is already running. Exiting immediately...");
+  log("❌ Another instance is already running. Exiting immediately...");
+  // Force immediate exit without waiting for anything
+  process.exit(0);
+} else {
+  console.log("✅ Got single instance lock. This is the primary instance.");
+  
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, focus the existing window instead
+    console.log("⚠️ Second instance attempt detected. Focusing existing window...");
+    
+    // Show notification dialog to user
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Inventory Management System',
+      message: 'Application is already running!',
+      detail: 'The Inventory Management System is already open. Only one instance can run at a time.',
+      buttons: ['OK']
+    });
+    
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+      mainWindow.show();
+      mainWindow.flashFrame(true); // Flash the window to get attention
+    }
+  });
+}
 
 let mainWindow = null;
 let backendProcess = null;
 let isAppQuitting = false;
 let isBackendStarting = false;
+let backendStartupAttempts = 0;
+const MAX_STARTUP_ATTEMPTS = 3;
+
+// ⚡ CLEANUP UTILITIES
+const cleanup = () => {
+  console.log("🧹 Performing cleanup...");
+  isAppQuitting = true;
+  
+  if (backendProcess && !backendProcess.killed) {
+    console.log("🔄 Terminating backend process...");
+    try {
+      if (process.platform === "win32") {
+        // On Windows, force kill the process tree
+        spawn("taskkill", ["/pid", backendProcess.pid, "/f", "/t"], { 
+          stdio: 'ignore' 
+        });
+      } else {
+        backendProcess.kill('SIGTERM');
+        setTimeout(() => {
+          if (!backendProcess.killed) {
+            backendProcess.kill('SIGKILL');
+          }
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("❌ Error terminating backend:", error);
+    }
+    backendProcess = null;
+  }
+  
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.destroy();
+    mainWindow = null;
+  }
+};
+
+// ⚡ PROCESS EXIT HANDLERS
+process.on('exit', cleanup);
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  cleanup();
+  process.exit(1);
+});
+
+// Handle Windows specific cleanup
+if (process.platform === "win32") {
+  process.on('SIGBREAK', cleanup);
+}
 
 function startBackendServer() {
   if (backendProcess || isBackendStarting) {
     console.log("Backend server already running or starting");
-    return;
+    return Promise.resolve();
   }
   
-  isBackendStarting = true;
-
-  const serverPath = isDev
-    ? path.join(__dirname, "server.js")
-    : path.join(process.resourcesPath, "app", "server.js");
-
-  console.log("Starting backend server from:", serverPath);
-
-  if (isDev) {
-    backendProcess = spawn("node", [serverPath], {
-      stdio: "inherit"
-    });
-  } else {
-    backendProcess = spawn(process.execPath, [serverPath], {
-      stdio: "inherit",
-      env: { ...process.env, NODE_ENV: "production" }
-    });
+  if (backendStartupAttempts >= MAX_STARTUP_ATTEMPTS) {
+    console.error("Max backend startup attempts reached. Giving up.");
+    log("❌ Max backend startup attempts reached. Giving up.");
+    log("Log file location:", logFile);
+    
+    const errorMsg = `Failed to start backend server after multiple attempts.\n\nLog file saved to:\n${logFile}\n\nPlease send this log file for support.`;
+    dialog.showErrorBox("Startup Failed", errorMsg);
+    isAppQuitting = true;
+    app.quit();
+    return Promise.reject(new Error(errorMsg));
   }
+  
+  return new Promise((resolve, reject) => {
+    isBackendStarting = true;
+    backendStartupAttempts++;
 
-  backendProcess.on("error", (error) => {
-    console.error("Failed to start backend server:", error);
-    dialog.showErrorBox("Backend Error", "Failed to start the backend server. Please restart the application.");
-  });
-
-  backendProcess.on("exit", (code) => {
-    console.log(`Backend server exited with code ${code}`);
-    if (!isAppQuitting) {
-      dialog.showErrorBox("Backend Stopped", "The backend server has stopped. The application will now close.");
-      isAppQuitting = true;
-      app.quit();
+    // Determine server path based on environment
+    let serverPath;
+    let resourcesPath;
+    let buildPath = null; // Declare at function scope!
+    
+    if (isDev) {
+      serverPath = path.join(__dirname, "server.js");
+      resourcesPath = path.join(__dirname, "resources");
+      buildPath = path.join(__dirname, "build"); // Set for development too
+    } else {
+      // In production, check for resources path in app.asar.unpacked
+      resourcesPath = path.join(process.resourcesPath, "app.asar.unpacked", "resources");
+      
+      // Ensure resources directory exists in production
+      if (!fs.existsSync(resourcesPath)) {
+        fs.mkdirSync(resourcesPath, { recursive: true });
+        console.log("📁 Created resources directory:", resourcesPath);
+      }
+      
+      // Find the build path for the React app
+      const possibleBuildPaths = [
+        path.join(process.resourcesPath, "app.asar.unpacked", "build"),
+        path.join(process.resourcesPath, "app", "build"),
+        path.join(process.resourcesPath, "build"),
+        path.join(__dirname, "build"),
+        path.join(path.dirname(process.execPath), "resources", "app", "build")
+      ];
+      
+      for (const p of possibleBuildPaths) {
+        if (fs.existsSync(p)) {
+          buildPath = p;
+          console.log("✅ Found build directory at:", buildPath);
+          break;
+        }
+      }
+      
+      if (!buildPath) {
+        console.error("❌ Build directory not found! Tried:", possibleBuildPaths);
+        buildPath = possibleBuildPaths[0]; // Use first as fallback
+      }
+      
+      // Try multiple possible paths for server.js
+      const possiblePaths = [
+        path.join(process.resourcesPath, "app.asar.unpacked", "server.js"),
+        path.join(process.resourcesPath, "server.js"),
+        path.join(__dirname, "server.js"),
+        path.join(process.resourcesPath, "app", "server.js"),
+        path.join(path.dirname(process.execPath), "resources", "app", "server.js")
+      ];
+      
+      for (const p of possiblePaths) {
+        if (fs.existsSync(p)) {
+          serverPath = p;
+          console.log("✅ Found server.js at:", p);
+          break;
+        }
+      }
+      
+      if (!serverPath) {
+        const errorMsg = `Server file not found. Tried:\n${possiblePaths.join('\n')}`;
+        dialog.showErrorBox("Server Not Found", errorMsg);
+        isAppQuitting = true;
+        app.quit();
+        return reject(new Error(errorMsg));
+      }
     }
-    backendProcess = null;
-    isBackendStarting = false;
+
+    console.log("🚀 Starting backend server from:", serverPath);
+    console.log("📊 Attempt:", backendStartupAttempts, "of", MAX_STARTUP_ATTEMPTS);
+
+    const env = {
+      ...process.env,
+      NODE_ENV: isDev ? "development" : "production",
+      PORT: "5001",
+      REACT_APP_API_URL: "http://localhost:5001",
+      RESOURCES_PATH: resourcesPath,
+      BUILD_PATH: buildPath || "" // Pass build path to server
+    };
+
+    console.log("🔧 Environment:", env.NODE_ENV, "Port:", env.PORT);
+
+    // Start the backend process
+    let nodeExecutable;
+    let args;
+    
+    if (isDev) {
+      nodeExecutable = "node";
+      args = [serverPath];
+    } else {
+      // In production, find Node.js executable
+      const appPath = path.dirname(process.execPath);
+      // DON'T redeclare resourcesPath - use the one from function scope!
+      
+      const possibleNodePaths = [
+        // Bundled node.exe in app.asar.unpacked/build (CORRECT PATH!)
+        path.join(process.resourcesPath, "app.asar.unpacked", "build", "node.exe"),
+        // Fallback: resources/app/build
+        path.join(process.resourcesPath, "app", "build", "node.exe"),
+        // Bundled node.exe in build folder
+        path.join(appPath, "resources", "app.asar.unpacked", "build", "node.exe"),
+        path.join(appPath, "resources", "app", "build", "node.exe"),
+        // Electron's directory (if available)
+        path.join(appPath, "node.exe"),
+        // System Node.js installations  
+        path.join(process.env.ProgramFiles || "C:\\Program Files", "nodejs", "node.exe"),
+        path.join(process.env['ProgramFiles(x86)'] || "C:\\Program Files (x86)", "nodejs", "node.exe"),
+        path.join(process.env.LOCALAPPDATA, "Programs", "nodejs", "node.exe")
+      ];
+      
+      nodeExecutable = null;
+      console.log("🔍 Searching for Node.js executable...");
+      console.log("📁 process.execPath:", process.execPath);
+      console.log("📁 App path (dirname):", appPath);
+      console.log("📁 Resources path (process.resourcesPath):", process.resourcesPath);
+      console.log("📁 Resources path (variable):", resourcesPath);
+      console.log("📁 __dirname:", __dirname);
+      console.log("");
+      console.log("Trying paths in order:");
+      
+      for (let i = 0; i < possibleNodePaths.length; i++) {
+        const nodePath = possibleNodePaths[i];
+        const exists = fs.existsSync(nodePath);
+        console.log(`${i + 1}. ${exists ? '✅ FOUND' : '❌ NOT FOUND'}: ${nodePath}`);
+        if (exists && !nodeExecutable) {
+          nodeExecutable = nodePath;
+        }
+      }
+      
+      if (!nodeExecutable) {
+        console.error("❌ Could not find node.exe!");
+        console.error("Tried paths:", possibleNodePaths);
+        
+        dialog.showErrorBox(
+          "Node.js Not Found",
+          "The application could not find Node.js executable.\n\n" +
+          "This is a packaging error. Please contact support.\n\n" +
+          "Attempted locations:\n" + possibleNodePaths.slice(0, 3).join('\n')
+        );
+        
+        isAppQuitting = true;
+        app.quit();
+        return reject(new Error("Node.js executable not found"));
+      }
+      
+      args = [serverPath];
+    }
+    
+    log("🚀 Spawning:", nodeExecutable, args);
+    log("   Working Directory:", env.BUILD_PATH || 'not set');
+    log("   Environment Variables:");
+    log("     NODE_ENV:", env.NODE_ENV);
+    log("     BUILD_PATH:", env.BUILD_PATH);
+    log("     RESOURCES_PATH:", env.RESOURCES_PATH);
+    
+    backendProcess = spawn(nodeExecutable, args, {
+      stdio: ["pipe", "pipe", "pipe"],
+      env: env,
+      windowsHide: false, // ALWAYS show console for debugging
+      detached: false
+    });
+
+    // Set a timeout for backend startup (30 seconds max)
+    const startupTimeout = setTimeout(() => {
+      if (isBackendStarting) {
+        console.error("⏰ Backend startup timeout after 30 seconds");
+        if (backendProcess && !backendProcess.killed) {
+          backendProcess.kill('SIGTERM');
+        }
+        isBackendStarting = false;
+        reject(new Error("Backend startup timeout"));
+      }
+    }, 30000);
+
+    // Handle process events
+    backendProcess.on("error", (error) => {
+      log("❌ Failed to start backend server:", error);
+      log("   Error message:", error.message);
+      log("   Error code:", error.code);
+      log("   Error stack:", error.stack);
+      clearTimeout(startupTimeout);
+      isBackendStarting = false;
+      reject(error);
+    });
+
+    backendProcess.on("exit", (code, signal) => {
+      log(`🔄 Backend server exited with code ${code}, signal: ${signal}`);
+      clearTimeout(startupTimeout);
+      backendProcess = null;
+      isBackendStarting = false;
+      
+      if (code === 0) {
+        resolve(); // Clean exit
+      } else {
+        log(`❌ Backend exited with non-zero code: ${code}`);
+        reject(new Error(`Backend exited with code ${code}`));
+      }
+    });
+
+    // Capture output for debugging
+    if (backendProcess.stdout) {
+      backendProcess.stdout.on('data', (data) => {
+        const output = data.toString();
+        log("📤 Backend stdout:", output);
+        
+        // Look for success indicators
+        if (output.includes('SERVER_READY:') || output.includes('Server running on') || output.includes('listening on')) {
+          log("✅ Backend server started successfully!");
+          clearTimeout(startupTimeout);
+          isBackendStarting = false;
+          backendStartupAttempts = 0; // Reset on success
+          resolve();
+        }
+      });
+    }
+
+    if (backendProcess.stderr) {
+      backendProcess.stderr.on('data', (data) => {
+        const output = data.toString();
+        log("📤 Backend stderr:", output);
+        
+        // Look for critical errors
+        if (output.includes('EADDRINUSE') || output.includes('address already in use')) {
+          console.error("🔴 Port already in use!");
+          clearTimeout(startupTimeout);
+          isBackendStarting = false;
+          reject(new Error("Port already in use - another instance may be running"));
+        }
+      });
+    }
+
+    // Simplified fallback: Just wait 3 seconds then do one health check
+    setTimeout(() => {
+      if (isBackendStarting && backendProcess && !backendProcess.killed) {
+        console.log("🔍 Performing final health check...");
+        const port = process.env.PORT || 5001;
+        const req = http.request({
+          hostname: 'localhost',
+          port: port,
+          path: '/ping',
+          method: 'GET',
+          timeout: 2000
+        }, (res) => {
+          if (res.statusCode === 200) {
+            console.log("✅ Final health check passed!");
+            clearTimeout(startupTimeout);
+            isBackendStarting = false;
+            backendStartupAttempts = 0;
+            resolve();
+          } else {
+            console.error("❌ Final health check failed");
+            clearTimeout(startupTimeout);
+            isBackendStarting = false;
+            reject(new Error("Backend health check failed"));
+          }
+        });
+        
+        req.on('error', (err) => {
+          console.error("❌ Final health check error:", err.message);
+          clearTimeout(startupTimeout);
+          isBackendStarting = false;
+          reject(new Error("Backend not responding"));
+        });
+        
+        req.end();
+      }
+    }, 3000); // Wait only 3 seconds
   });
 }
 
-// Health check with exponential backoff
-function waitForBackend(maxAttempts = 10) {
+// Health check with exponential backoff and better error handling
+function waitForBackend(maxAttempts = 15) {
   return new Promise((resolve, reject) => {
     let attempts = 0;
-    const baseDelay = 500; // Starting delay in ms
+    const baseDelay = 1000; // Starting delay in ms
     
     const check = () => {
       attempts++;
       if (attempts > maxAttempts) {
-        reject(new Error(`Backend did not start after ${maxAttempts} attempts`));
+        reject(new Error(`Backend did not start after ${maxAttempts} attempts (${maxAttempts * baseDelay / 1000}s)`));
         return;
       }
       
+      const port = process.env.PORT || 5001;
       const options = {
         hostname: 'localhost',
-        port: 5000,
+        port: port,
         path: '/ping',
         method: 'GET',
-        timeout: 2000
+        timeout: 3000
       };
       
       const req = http.request(options, (res) => {
         if (res.statusCode === 200) {
+          console.log(`Backend health check passed on attempt ${attempts}`);
           resolve();
         } else {
+          console.log(`Backend health check failed (status: ${res.statusCode}), retrying...`);
           retryWithBackoff();
         }
       });
       
-      req.on('error', () => retryWithBackoff());
+      req.on('error', (err) => {
+        console.log(`Backend health check error (attempt ${attempts}): ${err.message}`);
+        retryWithBackoff();
+      });
+      
+      req.on('timeout', () => {
+        console.log(`Backend health check timeout (attempt ${attempts})`);
+        req.destroy();
+        retryWithBackoff();
+      });
+      
       req.end();
     };
     
     const retryWithBackoff = () => {
-      const delay = baseDelay * Math.pow(2, attempts);
-      console.log(`Backend not ready, retrying in ${delay}ms...`);
+      const delay = baseDelay;
+      console.log(`Backend not ready, retrying in ${delay}ms... (attempt ${attempts}/${maxAttempts})`);
       setTimeout(check, delay);
     };
     
@@ -98,28 +469,28 @@ let isCreatingWindow = false;
 
 async function createWindow() {
   if (isCreatingWindow) {
-    console.log("Window is already being created, skipping duplicate call");
+    console.log("⚠️ Window is already being created, skipping duplicate call");
+    return;
+  }
+
+  if (mainWindow) {
+    console.log("✅ Window already exists, focusing it");
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+    mainWindow.show();
     return;
   }
 
   isCreatingWindow = true;
 
-  if (mainWindow) {
-    console.log("Window already exists");
-    if (!mainWindow.isVisible()) {
-      mainWindow.show();
-    }
-    isCreatingWindow = false;
-    return;
-  }
-
-  if (!backendProcess) {
-    startBackendServer();
-  }
-
   try {
-    await waitForBackend();
+    console.log("🚀 Starting application initialization...");
+    
+    // Start backend server and wait for it to be ready
+    console.log("🔧 Starting backend server...");
+    await startBackendServer();
 
+    console.log("🌐 Creating main window...");
     mainWindow = new BrowserWindow({
       width: 1200,
       height: 800,
@@ -127,19 +498,36 @@ async function createWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-      }
+        devTools: true // Enable DevTools for debugging
+      },
+      icon: path.join(__dirname, 'public/favicon.ico') // Add app icon
     });
 
-
-const startURL = isDev
+    const startURL = isDev
       ? "http://localhost:3000"
-      : "http://localhost:5000";
+      : "http://localhost:5001";
 
-    console.log("Backend ready, loading URL:", startURL);
+    console.log("📡 Loading application at:", startURL);
+    
+    // Add error handling for URL loading
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error(`❌ Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`);
+    });
+    
+    mainWindow.webContents.on('did-finish-load', () => {
+      console.log("✅ Page loaded successfully");
+    });
+    
+    mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+      console.log(`[Renderer] ${message}`);
+    });
+    
     await mainWindow.loadURL(startURL);
 
     mainWindow.once("ready-to-show", () => {
+      console.log("✨ Application window ready!");
       mainWindow.show();
+      isCreatingWindow = false;
     });
 
     mainWindow.on("close", (event) => {
@@ -166,9 +554,26 @@ const startURL = isDev
 
   } catch (err) {
     console.error("Failed to start backend:", err.message);
-    isAppQuitting = true;
-    dialog.showErrorBox("Backend Startup Failed", "Backend server failed to start.");
-    app.quit();
+    isCreatingWindow = false;
+    
+    // Don't immediately quit - let the user know what happened
+    const choice = dialog.showMessageBoxSync(null, {
+      type: 'error',
+      buttons: ['Retry', 'Quit'],
+      title: 'Backend Startup Failed',
+      message: 'Failed to start the backend server.',
+      detail: `Error: ${err.message}\n\nWould you like to retry or quit the application?`
+    });
+    
+    if (choice === 0) { // Retry
+      console.log("User chose to retry backend startup");
+      setTimeout(() => {
+        createWindow();
+      }, 1000);
+    } else { // Quit
+      isAppQuitting = true;
+      app.quit();
+    }
   } finally {
     isCreatingWindow = false;
   }

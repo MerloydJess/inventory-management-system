@@ -105,145 +105,335 @@ const EmployeeAddReturn = ({ userName }) => {
 
   return (
     <div className="employee-add-return">
-      <h2>Return Form</h2>
-      <button className="back-btn" onClick={() => navigate("/employee")}>
-        ← Back to Employee Panel
-      </button>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>RRSP No.</label>
-          <input ref={firstInputRef} type="text" name="rrspNo" value={form.rrspNo} onChange={handleChange} required />
+      <div className="form-container">
+        <div className="header-actions">
+          <h2>
+            <i className="fas fa-undo"></i>
+            Return Form
+          </h2>
+          <button className="back-btn" onClick={() => navigate("/employee")}>
+            <i className="fas fa-arrow-left"></i>
+            Back to Employee Panel
+          </button>
         </div>
-        <div className="form-group">
-          <label>Date</label>
-          <input type="date" name="date" value={form.date} onChange={handleChange} required />
-        </div>
-        <div className="form-group">
-          <label>Description</label>
-          <input type="text" name="description" value={form.description} onChange={handleChange} required />
-        </div>
-        <div className="form-group">
-          <label>Quantity</label>
-          <input type="number" name="quantity" value={form.quantity} onChange={handleChange} required />
-        </div>
-        <div className="form-group">
-          <label>ICS No.</label>
-          <input type="text" name="icsNo" value={form.icsNo} onChange={handleChange} required />
-        </div>
-        <div className="form-group">
-          <label>Date Acquired</label>
-          <input type="date" name="dateAcquired" value={form.dateAcquired} onChange={handleChange} required />
-        </div>
-        <div className="form-group">
-          <label>Amount</label>
-          <input type="number" name="amount" value={form.amount} onChange={handleChange} required />
-        </div>
-        <div className="form-group">
-          <label>Remarks</label>
-          <select name="remarks" value={form.remarks} onChange={handleChange}>
-            <option value="">Select Remark</option>
-            <option value="Functional">Damaged</option>
-            <option value="Destroyed">Destroyed</option>
-            <option value="For Disposal">For Disposal</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <h3>Returned By</h3>
-          <input type="text" value={form.returnedBy.name} readOnly />
-          <input type="text" value={form.returnedBy.position} readOnly />
-          <input
-            type="date"
-            name="returnDate"
-            value={form.returnedBy.returnDate}
-            onChange={(e) => handleNestedChange(e, "returnedBy")}
-            required
-          />
-          <input
-            type="text"
-            name="location"
-            placeholder="e.g., Provincial Capitol, Office A"
-            value={form.returnedBy.location}
-            onChange={(e) => handleNestedChange(e, "returnedBy")}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <h3>Received By</h3>
-          <input
-            type="text"
-            name="name"
-            placeholder="Name"
-            value={form.receivedBy.name}
-            onChange={(e) => handleNestedChange(e, "receivedBy")}
-            required
-          />
-          <input
-            type="text"
-            name="position"
-            placeholder="Position"
-            value={form.receivedBy.position}
-            onChange={(e) => handleNestedChange(e, "receivedBy")}
-            required
-          />
-          <input
-            type="date"
-            name="receiveDate"
-            value={form.receivedBy.receiveDate}
-            onChange={(e) => handleNestedChange(e, "receivedBy")}
-            required
-          />
-          <input
-            type="text"
-            name="location"
-            placeholder="e.g., Provincial Capitol, Office A"
-            value={form.receivedBy.location}
-            onChange={(e) => handleNestedChange(e, "receivedBy")}
-            required
-          />
-        </div>
-
-        <button type="button" onClick={() => setShowSecondReceiver(!showSecondReceiver)}>
-          {showSecondReceiver ? "Remove Second Receiver" : "Add Second Receiver"}
-        </button>
-
-        {showSecondReceiver && (
-          <div className="form-group">
-            <h3>Second Receiver</h3>
-            <input
-              type="text"
-              name="name"
-              placeholder="Name"
-              value={form.secondReceivedBy.name}
-              onChange={(e) => handleNestedChange(e, "secondReceivedBy")}
-            />
-            <input
-              type="text"
-              name="position"
-              placeholder="Position"
-              value={form.secondReceivedBy.position}
-              onChange={(e) => handleNestedChange(e, "secondReceivedBy")}
-            />
-            <input
-              type="date"
-              name="receiveDate"
-              value={form.secondReceivedBy.receiveDate}
-              onChange={(e) => handleNestedChange(e, "secondReceivedBy")}
-            />
-            <input
-              type="text"
-              name="location"
-              placeholder="e.g., Provincial Capitol, Office A"
-              value={form.secondReceivedBy.location}
-              onChange={(e) => handleNestedChange(e, "secondReceivedBy")}
-              required
-            />
+        
+        <form onSubmit={handleSubmit}>
+          {/* Basic Information Section */}
+          <div className="form-section">
+            <h3 className="section-title">
+              <i className="fas fa-info-circle"></i>
+              Basic Information
+            </h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-hashtag"></i>
+                  RRSP No. *
+                </label>
+                <input 
+                  ref={firstInputRef} 
+                  type="text" 
+                  name="rrspNo" 
+                  value={form.rrspNo} 
+                  onChange={handleChange} 
+                  required 
+                  placeholder="Enter RRSP number"
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-calendar"></i>
+                  Date *
+                </label>
+                <input 
+                  type="date" 
+                  name="date" 
+                  value={form.date} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-file-alt"></i>
+                  Description *
+                </label>
+                <input 
+                  type="text" 
+                  name="description" 
+                  value={form.description} 
+                  onChange={handleChange} 
+                  required 
+                  placeholder="Enter item description"
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-sort-numeric-up"></i>
+                  Quantity *
+                </label>
+                <input 
+                  type="number" 
+                  name="quantity" 
+                  value={form.quantity} 
+                  onChange={handleChange} 
+                  required 
+                  placeholder="Enter quantity"
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-barcode"></i>
+                  ICS No. *
+                </label>
+                <input 
+                  type="text" 
+                  name="icsNo" 
+                  value={form.icsNo} 
+                  onChange={handleChange} 
+                  required 
+                  placeholder="Enter ICS number"
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-calendar-check"></i>
+                  Date Acquired *
+                </label>
+                <input 
+                  type="date" 
+                  name="dateAcquired" 
+                  value={form.dateAcquired} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-peso-sign"></i>
+                  Amount *
+                </label>
+                <input 
+                  type="number" 
+                  name="amount" 
+                  value={form.amount} 
+                  onChange={handleChange} 
+                  required 
+                  step="0.01"
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-comment"></i>
+                  Remarks
+                </label>
+                <select name="remarks" value={form.remarks} onChange={handleChange}>
+                  <option value="">Select Remark</option>
+                  <option value="Damaged">Damaged</option>
+                  <option value="Destroyed">Destroyed</option>
+                  <option value="For Disposal">For Disposal</option>
+                </select>
+              </div>
+            </div>
           </div>
-        )}
 
-        <button type="submit">Submit Return</button>
-      </form>
+          {/* Returned By Section */}
+          <div className="form-section">
+            <h3 className="section-title">
+              <i className="fas fa-user-minus"></i>
+              Returned By
+            </h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-user"></i>
+                  Name
+                </label>
+                <input type="text" value={form.returnedBy.name} readOnly />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-briefcase"></i>
+                  Position
+                </label>
+                <input type="text" value={form.returnedBy.position} readOnly />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-calendar"></i>
+                  Return Date *
+                </label>
+                <input
+                  type="date"
+                  name="returnDate"
+                  value={form.returnedBy.returnDate}
+                  onChange={(e) => handleNestedChange(e, "returnedBy")}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-map-marker-alt"></i>
+                  Location *
+                </label>
+                <input
+                  type="text"
+                  name="location"
+                  placeholder="e.g., Provincial Capitol, Office A"
+                  value={form.returnedBy.location}
+                  onChange={(e) => handleNestedChange(e, "returnedBy")}
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Received By Section */}
+          <div className="form-section">
+            <h3 className="section-title">
+              <i className="fas fa-user-check"></i>
+              Received By
+            </h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-user"></i>
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Enter receiver name"
+                  value={form.receivedBy.name}
+                  onChange={(e) => handleNestedChange(e, "receivedBy")}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-briefcase"></i>
+                  Position *
+                </label>
+                <input
+                  type="text"
+                  name="position"
+                  placeholder="Enter position"
+                  value={form.receivedBy.position}
+                  onChange={(e) => handleNestedChange(e, "receivedBy")}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-calendar"></i>
+                  Receive Date *
+                </label>
+                <input
+                  type="date"
+                  name="receiveDate"
+                  value={form.receivedBy.receiveDate}
+                  onChange={(e) => handleNestedChange(e, "receivedBy")}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <i className="fas fa-map-marker-alt"></i>
+                  Location *
+                </label>
+                <input
+                  type="text"
+                  name="location"
+                  placeholder="e.g., Provincial Capitol, Office A"
+                  value={form.receivedBy.location}
+                  onChange={(e) => handleNestedChange(e, "receivedBy")}
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <button 
+            type="button" 
+            className="toggle-receiver-btn"
+            onClick={() => setShowSecondReceiver(!showSecondReceiver)}
+          >
+            <i className={`fas ${showSecondReceiver ? 'fa-minus' : 'fa-plus'}`}></i>
+            {showSecondReceiver ? "Remove Second Receiver" : "Add Second Receiver"}
+          </button>
+
+          {/* Second Receiver Section */}
+          {showSecondReceiver && (
+            <div className="form-section">
+              <h3 className="section-title">
+                <i className="fas fa-user-plus"></i>
+                Second Receiver
+              </h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>
+                    <i className="fas fa-user"></i>
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="Enter second receiver name"
+                    value={form.secondReceivedBy.name}
+                    onChange={(e) => handleNestedChange(e, "secondReceivedBy")}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>
+                    <i className="fas fa-briefcase"></i>
+                    Position
+                  </label>
+                  <input
+                    type="text"
+                    name="position"
+                    placeholder="Enter position"
+                    value={form.secondReceivedBy.position}
+                    onChange={(e) => handleNestedChange(e, "secondReceivedBy")}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>
+                    <i className="fas fa-calendar"></i>
+                    Receive Date
+                  </label>
+                  <input
+                    type="date"
+                    name="receiveDate"
+                    value={form.secondReceivedBy.receiveDate}
+                    onChange={(e) => handleNestedChange(e, "secondReceivedBy")}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>
+                    <i className="fas fa-map-marker-alt"></i>
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    name="location"
+                    placeholder="e.g., Provincial Capitol, Office A"
+                    value={form.secondReceivedBy.location}
+                    onChange={(e) => handleNestedChange(e, "secondReceivedBy")}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="submit-section">
+            <button type="submit">
+              <i className="fas fa-paper-plane"></i>
+              Submit Return
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

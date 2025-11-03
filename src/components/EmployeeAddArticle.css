@@ -1,53 +1,161 @@
-/* 🌟 Center the Form */
+/* ===== 🌟 Enhanced Add Article Form ===== */
 .employee-add-article {
-    width: 50%;
-    max-width: 700px;
-    margin: 50px auto;
-    padding: 30px;
-    background: #ffffff;
-    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
-    border-radius: 12px;
-    transition: all 0.3s ease-in-out;
-  }
-  
-  /* 🎯 Improve Heading */
-  .employee-add-article h2 {
-    text-align: center;
-    color: #222;
-    font-size: 26px;
-    margin-bottom: 20px;
-    font-weight: bold;
-  }
-  
-  /* 🏷️ Style Labels */
-  .employee-add-article label {
-    display: block;
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 5px;
-    color: #333;
-  }
-  
-  /* 🔹 Style Input Fields */
-  .employee-add-article input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid #aaa;
-    border-radius: 6px;
-    font-size: 15px;
-    color: #333;
-    background: #fff;
-    transition: 0.3s ease-in-out;
-    display: block;
-  }
-  
-  /* 🎨 Focus Effect on Inputs */
-  .employee-add-article input:focus {
-    border-color: #007bff;
-    box-shadow: 0px 0px 6px rgba(0, 123, 255, 0.4);
-    outline: none;
-  }
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40px 20px;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.employee-add-article .form-container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.employee-add-article h2 {
+  text-align: center;
+  color: #333;
+  font-size: 32px;
+  margin-bottom: 32px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.employee-add-article h2 i {
+  color: #667eea;
+  font-size: 28px;
+}
+
+.employee-add-article .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.employee-add-article .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.employee-add-article label {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.employee-add-article label i {
+  color: #667eea;
+  font-size: 16px;
+}
+
+.employee-add-article input {
+  padding: 16px 20px;
+  border: 2px solid rgba(102, 126, 234, 0.2);
+  border-radius: 12px;
+  font-size: 15px;
+  color: #333;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.employee-add-article input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: white;
+  transform: translateY(-1px);
+}
+
+.employee-add-article input[readonly] {
+  background: rgba(102, 126, 234, 0.05);
+  border-color: rgba(102, 126, 234, 0.1);
+  color: #666;
+}
+
+.employee-add-article .form-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+
+.employee-add-article button {
+  padding: 16px 32px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 160px;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.employee-add-article button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.employee-add-article button:hover::before {
+  left: 100%;
+}
+
+.employee-add-article button[type="submit"] {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: white;
+  box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
+}
+
+.employee-add-article button[type="submit"]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(46, 204, 113, 0.4);
+}
+
+.employee-add-article .back-btn {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  color: white;
+  box-shadow: 0 6px 20px rgba(108, 117, 125, 0.3);
+}
+
+.employee-add-article .back-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+}
+
+.employee-add-article button i {
+  font-size: 16px;
+  transition: transform 0.3s ease;
+}
+
+.employee-add-article button:hover i {
+  transform: scale(1.1);
+}
   
   /* 🔵 Add Article Button */
   .employee-add-article button {

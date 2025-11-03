@@ -26,11 +26,19 @@ function App() {
     if (storedUser) setUserName(storedUser);
   }, []);
 
-  const handleLogin = (role, user) => {
+  const handleLogin = (role, user, userData = {}) => {
     setUserRole(role);
     setUserName(user);
     localStorage.setItem("userRole", role);
     localStorage.setItem("userName", user);
+    
+    // Store additional user data if available
+    if (userData.employeeId) {
+      localStorage.setItem("employeeId", userData.employeeId);
+    }
+    if (userData.userId) {
+      localStorage.setItem("userId", userData.userId);
+    }
   };
 
   const handleLogout = () => {
@@ -38,21 +46,27 @@ function App() {
     setUserName("");
     localStorage.removeItem("userRole");
     localStorage.removeItem("userName");
+    localStorage.removeItem("employeeId");
+    localStorage.removeItem("userId");
     navigate("/");
   };
 
   return (
     <>
-      <div className="App">
-        <header className="App-header">
-          <h1 className="title">BTS Inventory</h1>
-          {userRole && (
+      {userRole && (
+        <div className="App">
+          <header className="header">
+            <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+              <i className="fas fa-boxes" style={{fontSize: '24px', color: '#667eea'}}></i>
+              <span>BTS Inventory Management</span>
+            </div>
             <button className="logout-btn" onClick={handleLogout}>
+              <i className="fas fa-sign-out-alt" style={{marginRight: '6px'}}></i>
               Logout
             </button>
-          )}
-        </header>
-      </div>
+          </header>
+        </div>
+      )}
       <div className="content">
         <Routes>
           <Route

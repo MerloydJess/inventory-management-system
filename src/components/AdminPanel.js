@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import "./AdminPanel.css";
 import { useNavigate } from "react-router-dom";
+import AdminDashboard from "./AdminDashboard";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
 
-const AdminPanel = () => {
+const AdminPanel = ({ userName }) => {
+  const [currentView, setCurrentView] = useState("dashboard");
   const [product, setProduct] = useState({
     article: "",
     description: "",
@@ -41,6 +43,8 @@ const AdminPanel = () => {
     email: "",
     contact_number: "",
     address: "",
+    password: "",
+    confirmPassword: "",
   });
   const [editingProduct, setEditingProduct] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
@@ -228,10 +232,20 @@ const AdminPanel = () => {
 
   const handleAddEmployee = (e) => {
     e.preventDefault();
+    
+    // Validate passwords match
+    if (newEmployee.password !== newEmployee.confirmPassword) {
+      alert("❌ Passwords do not match!");
+      return;
+    }
+
+    // Remove confirmPassword before sending to server
+    const { confirmPassword, ...employeeData } = newEmployee;
+
     fetch(`${API_BASE_URL}/add-employee`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newEmployee),
+      body: JSON.stringify(employeeData),
     })
       .then((res) => res.json())
       .then((data) => {
@@ -240,7 +254,16 @@ const AdminPanel = () => {
         }
         alert("✅ Employee added successfully!");
         setShowEmployeeForm(false);
-        setNewEmployee({ name: "", position: "", department: "", email: "", contact_number: "", address: "" });
+        setNewEmployee({ 
+          name: "", 
+          position: "", 
+          department: "", 
+          email: "", 
+          contact_number: "", 
+          address: "",
+          password: "",
+          confirmPassword: "",
+        });
         fetchEmployees();
       })
       .catch((err) => {
@@ -340,483 +363,363 @@ const AdminPanel = () => {
       .then(fetchEmployees);
   };
 
-  return (
-    <div className="admin-panel">
-      <div className="admin-header-buttons">
-        <button className="returns-panel-btn" onClick={() => navigate("/returns-panel")}>
-          Go to Returns Panel
-        </button>
-        <button className="manage-articles-btn" onClick={() => navigate("/manage-articles")}>
-          Manage Articles
-        </button>
-      </div>
+  if (currentView === 'dashboard') {
+    return <AdminDashboard onViewChange={setCurrentView} />;
+  }
 
-      <h2>Add New Article</h2>
-      <form onSubmit={handleProductSubmit}>
-        <input type="text" name="article" placeholder="Article" value={product.article} onChange={handleChange} required />
-        <textarea name="description" placeholder="Description" value={product.description} onChange={handleChange} />
-        <input type="date" name="date_acquired" value={product.date_acquired} onChange={handleChange} />
-        <input type="text" name="property_number" placeholder="Property Number" value={product.property_number} onChange={handleChange} />
-        <input type="text" name="unit" placeholder="Unit (e.g., PC, SET, UNIT)" value={product.unit} onChange={handleChange} />
-        <input type="number" name="unit_value" placeholder="Unit Value" value={product.unit_value} onChange={handleChange} required />
-        <input type="number" name="balance_per_card" placeholder="Balance Per Card" value={product.balance_per_card} onChange={handleChange} />
-        <input type="number" name="on_hand_per_count" placeholder="On Hand Per Count" value={product.on_hand_per_count} onChange={handleChange} />
-
-        <input
-          type="text"
-          name="total_amount"
-          placeholder="Total Amount"
-          value={`₱${Number(product.total_amount).toLocaleString("en-PH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}`}
-          readOnly
-        />
-
-        <div className="user-select">
-          <select name="actual_user" value={product.actual_user} onChange={handleChange} required>
-            <option value="">Select Employee</option>
-            {employees.map((emp) => (
-              <option key={emp.id} value={emp.name}>
-                {emp.name} ({emp.position || 'No Position'})
-              </option>
-            ))}
-          </select>
+  if (currentView === 'articles') {
+    return (
+      <div className="admin-panel">
+        <div className="admin-header-buttons">
+          <button className="dashboard-btn" onClick={() => setCurrentView('dashboard')}>
+            ← Back to Dashboard
+          </button>
+          <button className="manage-articles-btn" onClick={() => navigate("/manage-articles")}>
+            Manage Articles
+          </button>
+          <button className="add-return-btn" onClick={() => navigate("/returns-panel")}>
+            Add Return
+          </button>
         </div>
 
-        <textarea name="remarks" placeholder="Remarks" value={product.remarks} onChange={handleChange} />
-        <button type="submit">Add Article</button>
-      </form>
+        <h2>Add New Article</h2>
+        <form onSubmit={handleProductSubmit}>
+          <input type="text" name="article" placeholder="Article" value={product.article} onChange={handleChange} required />
+          <textarea name="description" placeholder="Description" value={product.description} onChange={handleChange} />
+          <input type="date" name="date_acquired" value={product.date_acquired} onChange={handleChange} />
+          <input type="text" name="property_number" placeholder="Property Number" value={product.property_number} onChange={handleChange} />
+          <input type="text" name="unit" placeholder="Unit (e.g., PC, SET, UNIT)" value={product.unit} onChange={handleChange} />
+          <input type="number" name="unit_value" placeholder="Unit Value" value={product.unit_value} onChange={handleChange} required />
+          <input type="number" name="balance_per_card" placeholder="Balance Per Card" value={product.balance_per_card} onChange={handleChange} />
+          <input type="number" name="on_hand_per_count" placeholder="On Hand Per Count" value={product.on_hand_per_count} onChange={handleChange} />
 
-      <div className="add-supervisor-section">
-        <h3>Add Supervisor/Admin</h3>
-        <button type="button" className="add-supervisor-btn" onClick={() => setShowUserForm(true)}>
-          + Add Supervisor/Admin
-        </button>
+          <input
+            type="text"
+            name="total_amount"
+            placeholder="Total Amount"
+            value={`₱${Number(product.total_amount).toLocaleString("en-PH", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`}
+            readOnly
+          />
+
+          <div className="user-select">
+            <select name="actual_user" value={product.actual_user} onChange={handleChange} required>
+              <option value="">Select Employee</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.name}>
+                  {emp.name} ({emp.position || 'No Position'})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <textarea name="remarks" placeholder="Remarks" value={product.remarks} onChange={handleChange} />
+          <button type="submit">Add Article</button>
+        </form>
       </div>
+    );
+  }
 
-      {showUserForm && (
-        <div className="popup-form">
-          <h3>Add New User</h3>
-          <form onSubmit={handleAddUser}>
-            <input
-              type="text"
-              name="name"
-              placeholder="User Name"
-              value={newUser.name}
-              onChange={handleUserChange}
-              required
-            />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={newUser.password}
-              onChange={handleUserChange}
-              required
-            />
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirm Password"
-              value={newUser.confirmPassword}
-              onChange={handleUserChange}
-              required
-            />
-            <input type="hidden" name="role" value="supervisor" />
-            <button type="submit">Save User</button>
-            <button type="button" onClick={() => setShowUserForm(false)}>
-              Cancel
-            </button>
-          </form>
+  if (currentView === 'users') {
+    return (
+      <div className="admin-panel">
+        <div className="admin-header-buttons">
+          <button className="dashboard-btn" onClick={() => setCurrentView('dashboard')}>
+            ← Back to Dashboard
+          </button>
         </div>
-      )}
 
-      {showEmployeeForm && (
-        <div className="popup-form">
-          <h3>Add Employee</h3>
-          <form onSubmit={handleAddEmployee}>
-            <input name="name" placeholder="Name" value={newEmployee.name} onChange={handleEmployeeChange} required />
-            <input name="position" placeholder="Position" value={newEmployee.position} onChange={handleEmployeeChange} />
-            <input name="department" placeholder="Department" value={newEmployee.department} onChange={handleEmployeeChange} />
-            <input name="email" placeholder="Email" value={newEmployee.email} onChange={handleEmployeeChange} />
-            <input name="contact_number" placeholder="Contact Number" value={newEmployee.contact_number} onChange={handleEmployeeChange} />
-            <input name="address" placeholder="Address" value={newEmployee.address} onChange={handleEmployeeChange} />
-            <button type="submit">Save Employee</button>
-            <button type="button" onClick={() => setShowEmployeeForm(false)}>
-              Cancel
-            </button>
-          </form>
-          {/* Show generated Employee ID after adding (if available) */}
-          {newEmployee.employee_id && (
-            <div className="employee-id-display">
-              <strong>Employee ID:</strong> {newEmployee.employee_id}
-              <button
-                style={{ marginLeft: 4, fontSize: 12 }}
-                onClick={() => {
-                  navigator.clipboard.writeText(newEmployee.employee_id);
-                  alert("Copied: " + newEmployee.employee_id);
-                }}
-              >
-                Copy
-              </button>
-            </div>
+        <h2>User Management</h2>
+        
+        {/* Add User Section */}
+        <div className="add-user-section">
+          <button onClick={() => setShowUserForm(!showUserForm)} className="toggle-form-btn">
+            {showUserForm ? "Cancel" : "Add Supervisor/Admin"}
+          </button>
+
+          {showUserForm && (
+            <form onSubmit={handleAddUser} className="user-form">
+              <h3>Add New User</h3>
+              <input type="text" name="name" placeholder="Name" value={newUser.name} onChange={handleUserChange} required />
+              <input type="password" name="password" placeholder="Password" value={newUser.password} onChange={handleUserChange} required />
+              <input type="password" name="confirmPassword" placeholder="Confirm Password" value={newUser.confirmPassword} onChange={handleUserChange} required />
+              <select name="role" value={newUser.role} onChange={handleUserChange} required>
+                <option value="supervisor">Supervisor</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button type="submit">Add User</button>
+            </form>
           )}
         </div>
-      )}
 
-      <h3>Current Users</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Role</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td>{user.name}</td>
-              <td>{user.role}</td>
-              <td>
-                <button className="edit-btn" onClick={() => setEditingUser(user)}>✏️ Edit</button>
-                <button className="delete-btn" onClick={() => handleDeleteUser(user.id)}>🗑 Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        {/* Add Employee Section */}
+        <div className="add-employee-section">
+          <button onClick={() => setShowEmployeeForm(!showEmployeeForm)} className="toggle-form-btn">
+            {showEmployeeForm ? "Cancel" : "Add Employee"}
+          </button>
 
-      <h3>Employees</h3>
-      <button onClick={() => setShowEmployeeForm(true)} style={{ marginBottom: "12px" }}>+ Add Employee</button>
-      <table>
-        <thead>
-          <tr>
-            <th>Employee ID</th>
-            <th>Name</th>
-            <th>Position</th>
-            <th>Department</th>
-            <th>Email</th>
-            <th>Contact</th>
-            <th>Address</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Array.isArray(employees) && employees.length > 0 ? (
-            employees.map(emp => (
-              <tr key={emp.id}>
-                <td>
-                  {emp.employee_id || "-"}
-                  {emp.employee_id && (
-                  <button
-                    style={{ marginLeft: 4, fontSize: 12 }}
-                    onClick={() => {
-                      navigator.clipboard.writeText(emp.employee_id);
-                      alert("Copied: " + emp.employee_id);
-                    }}
-                  >
-                    Copy
-                  </button>
-                )}
-              </td>
-              <td>{emp.name}</td>
-              <td>{emp.position}</td>
-              <td>{emp.department}</td>
-              <td>{emp.email}</td>
-              <td>{emp.contact_number}</td>
-              <td>{emp.address}</td>
-              <td>
-                <button onClick={() => handleEditEmployee(emp)}>✏️ Edit</button>
-                <button onClick={() => handleDeleteEmployee(emp.id)}>🗑 Delete</button>
-              </td>
-            </tr>
-          ))
-          ) : null}
-        </tbody>
-      </table>
-
-      {/* Edit Product Modal */}
-      {editingProduct && (
-        <div className="modal">
-          <div className="modal-content">
-            <h2>{showAdminEdit ? 'Admin Edit Article' : 'Edit Article'}</h2>
-            <form onSubmit={handleEditProductSubmit}>
-              <div className="form-group">
-                <label>Article Name:</label>
-                <input
-                  type="text"
-                  name="article"
-                  value={editingProduct.article}
-                  onChange={handleEditProductChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Description:</label>
-                <input
-                  type="text"
-                  name="description"
-                  value={editingProduct.description}
-                  onChange={handleEditProductChange}
-                />
-              </div>
-              <div className="form-group">
-                <label>Unit:</label>
-                <input
-                  type="text"
-                  name="unit"
-                  value={editingProduct.unit}
-                  onChange={handleEditProductChange}
-                />
-              </div>
-              <div className="form-group">
-                <label>Unit Value:</label>
-                <input
-                  type="number"
-                  name="unit_value"
-                  value={editingProduct.unit_value}
-                  onChange={handleEditProductChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Balance Per Card:</label>
-                <input
-                  type="number"
-                  name="balance_per_card"
-                  value={editingProduct.balance_per_card}
-                  onChange={handleEditProductChange}
-                />
-              </div>
-              <div className="form-group">
-                <label>On Hand Count:</label>
-                <input
-                  type="number"
-                  name="on_hand_per_count"
-                  value={editingProduct.on_hand_per_count}
-                  onChange={handleEditProductChange}
-                />
-              </div>
-              <div className="form-group">
-                <label>Actual User:</label>
-                <select
-                  name="actual_user"
-                  value={editingProduct.actual_user}
-                  onChange={handleEditProductChange}
-                  required
-                >
-                  <option value="">Select User</option>
-                  {employees.map(emp => (
-                    <option key={emp.id} value={emp.name}>{emp.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Remarks:</label>
-                <textarea
-                  name="remarks"
-                  value={editingProduct.remarks}
-                  onChange={handleEditProductChange}
-                />
-              </div>
-
-              {showAdminEdit && (
-                <div className="form-group admin-fields">
-                  <label>Admin Note (Required):</label>
-                  <textarea
-                    value={adminNote}
-                    onChange={(e) => setAdminNote(e.target.value)}
-                    placeholder="Enter reason for admin edit..."
-                    required={showAdminEdit}
-                  />
-                </div>
-              )}
-
-              {adminEditFeedback && (
-                <div className={`feedback ${adminEditFeedback.type}`}>
-                  {adminEditFeedback.message}
-                </div>
-              )}
-
-              <div className="modal-buttons">
-                <button type="submit">{showAdminEdit ? 'Save (Admin)' : 'Save'}</button>
-                <button type="button" onClick={() => {
-                  setEditingProduct(null);
-                  setShowAdminEdit(false);
-                  setAdminNote("");
-                  setAdminEditFeedback(null);
-                }}>
-                  Cancel
-                </button>
-              </div>
+          {showEmployeeForm && (
+            <form onSubmit={handleAddEmployee} className="employee-form">
+              <h3>Add New Employee</h3>
+              <input type="text" name="name" placeholder="Name" value={newEmployee.name} onChange={handleEmployeeChange} required />
+              <input type="text" name="position" placeholder="Position" value={newEmployee.position} onChange={handleEmployeeChange} />
+              <input type="text" name="department" placeholder="Department" value={newEmployee.department} onChange={handleEmployeeChange} />
+              <input type="email" name="email" placeholder="Email" value={newEmployee.email} onChange={handleEmployeeChange} />
+              <input type="text" name="contact_number" placeholder="Contact Number" value={newEmployee.contact_number} onChange={handleEmployeeChange} />
+              <input type="text" name="address" placeholder="Address" value={newEmployee.address} onChange={handleEmployeeChange} />
+              <input type="password" name="password" placeholder="Password" value={newEmployee.password} onChange={handleEmployeeChange} required />
+              <input type="password" name="confirmPassword" placeholder="Confirm Password" value={newEmployee.confirmPassword} onChange={handleEmployeeChange} required />
+              <button type="submit">Add Employee</button>
             </form>
+          )}
+        </div>
+
+        {/* Users Table */}
+        <div className="users-table-section">
+          <h3>System Users</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id}>
+                  <td>{user.name}</td>
+                  <td>{user.role}</td>
+                  <td>
+                    <button onClick={() => handleEditUser(user)}>Edit</button>
+                    <button onClick={() => handleDeleteUser(user.id)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Employees Table */}
+        <div className="employees-table-section">
+          <h3>Employees</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Position</th>
+                <th>Department</th>
+                <th>Contact</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map((employee) => (
+                <tr key={employee.id}>
+                  <td>{employee.name}</td>
+                  <td>{employee.position}</td>
+                  <td>{employee.department}</td>
+                  <td>{employee.contact_number}</td>
+                  <td>
+                    <button onClick={() => handleEditEmployee(employee)}>Edit</button>
+                    <button onClick={() => handleDeleteEmployee(employee.id)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Edit User Modal */}
+        {editingUser && (
+          <div className="edit-modal">
+            <div className="modal-content">
+              <h3>Edit User</h3>
+              <form onSubmit={handleEditUserSubmit}>
+                <input type="text" name="name" value={editingUser.name} onChange={handleEditUserChange} required />
+                <select name="role" value={editingUser.role} onChange={handleEditUserChange} required>
+                  <option value="supervisor">Supervisor</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <div className="modal-actions">
+                  <button type="submit">Save</button>
+                  <button type="button" onClick={() => setEditingUser(null)}>Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Employee Modal */}
+        {editingEmployee && (
+          <div className="edit-modal">
+            <div className="modal-content">
+              <h3>Edit Employee</h3>
+              <form onSubmit={handleEditEmployeeSubmit}>
+                <input type="text" name="name" value={editingEmployee.name} onChange={handleEditEmployeeChange} required />
+                <input type="text" name="position" value={editingEmployee.position} onChange={handleEditEmployeeChange} />
+                <input type="text" name="department" value={editingEmployee.department} onChange={handleEditEmployeeChange} />
+                <input type="email" name="email" value={editingEmployee.email} onChange={handleEditEmployeeChange} />
+                <input type="text" name="contact_number" value={editingEmployee.contact_number} onChange={handleEditEmployeeChange} />
+                <input type="text" name="address" value={editingEmployee.address} onChange={handleEditEmployeeChange} />
+                <div className="modal-actions">
+                  <button type="submit">Save</button>
+                  <button type="button" onClick={() => setEditingEmployee(null)}>Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (currentView === 'reports') {
+    return (
+      <div className="admin-panel">
+        <div className="admin-header-buttons">
+          <button className="dashboard-btn" onClick={() => setCurrentView('dashboard')}>
+            ← Back to Dashboard
+          </button>
+        </div>
+
+        <h2>Export Reports</h2>
+        
+        <div className="reports-section">
+          <div className="date-filter">
+            <h3>Date Range Filter</h3>
+            <div className="date-inputs">
+              <label>Start Date:</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              
+              <label>End Date:</label>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="export-options">
+            <h3>Export Options</h3>
+            <div className="export-buttons">
+              <button 
+                onClick={() => window.open(`${API_BASE_URL}/export-products/pdf?startDate=${startDate}&endDate=${endDate}`, '_blank')}
+                className="export-btn pdf-btn"
+              >
+                <i className="fas fa-file-pdf"></i>
+                Export as PDF
+              </button>
+              
+              <button 
+                onClick={() => window.open(`${API_BASE_URL}/export-products/excel?startDate=${startDate}&endDate=${endDate}`, '_blank')}
+                className="export-btn excel-btn"
+              >
+                <i className="fas fa-file-excel"></i>
+                Export as Excel
+              </button>
+              
+              <button 
+                onClick={() => window.open(`${API_BASE_URL}/export-products/csv?startDate=${startDate}&endDate=${endDate}`, '_blank')}
+                className="export-btn csv-btn"
+              >
+                <i className="fas fa-file-csv"></i>
+                Export as CSV
+              </button>
+            </div>
+          </div>
+
+          <div className="report-preview">
+            <h3>Products Preview</h3>
+            <div className="products-count">
+              <p>Total Products: {products.length}</p>
+              {startDate && endDate && (
+                <p>Date Range: {startDate} to {endDate}</p>
+              )}
+            </div>
+            
+            <div className="products-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Article</th>
+                    <th>Description</th>
+                    <th>Date Acquired</th>
+                    <th>Unit Value</th>
+                    <th>Actual User</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.slice(0, 10).map((product) => (
+                    <tr key={product.id}>
+                      <td>{product.article}</td>
+                      <td>{product.description}</td>
+                      <td>{new Date(product.date_acquired).toLocaleDateString()}</td>
+                      <td>₱{product.unit_value}</td>
+                      <td>{product.actual_user}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {products.length > 10 && (
+                <p className="table-note">Showing first 10 items. Export to see all data.</p>
+              )}
+            </div>
           </div>
         </div>
-      )}
-
-      <div className="export-buttons">
-        <h3>Export Reports</h3>
-        <div className="date-filters">
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-        </div>
-        <button
-          className="export-btn pdf"
-          onClick={() =>
-            window.open(
-              `${API_BASE_URL}/export-products/pdf?startDate=${startDate}&endDate=${endDate}&includeReturns=true`,
-              "_blank"
-            )
-          }
-        >
-          📄 Export Products & Returns as PDF
-        </button>
-        <button
-          className="export-btn excel"
-          onClick={() =>
-            window.open(
-              `${API_BASE_URL}/export-products/excel?startDate=${startDate}&endDate=${endDate}&includeReturns=true`,
-              "_blank"
-            )
-          }
-        >
-          📊 Export Products & Returns as Excel
-        </button>
       </div>
+    );
+  }
 
-      {/* Edit popup form */}
-      {editingProduct && (
-        <div className="popup-form">
-          <h3>Edit Article</h3>
-          <form onSubmit={handleEditProductSubmit}>
-            <input
-              type="text"
-              name="article"
-              value={editingProduct.article}
-              onChange={handleEditProductChange}
-              required
-            />
-            <textarea
-              name="description"
-              value={editingProduct.description}
-              onChange={handleEditProductChange}
-            />
-            <input
-              type="text"
-              name="unit"
-              value={editingProduct.unit}
-              onChange={handleEditProductChange}
-            />
-            <input
-              type="number"
-              name="unit_value"
-              value={editingProduct.unit_value}
-              onChange={handleEditProductChange}
-            />
-            <input
-              type="number"
-              name="balance_per_card"
-              value={editingProduct.balance_per_card}
-              onChange={handleEditProductChange}
-            />
-            <input
-              type="number"
-              name="on_hand_per_count"
-              value={editingProduct.on_hand_per_count}
-              onChange={handleEditProductChange}
-            />
-            <input
-              type="number"
-              name="total_amount"
-              value={editingProduct.total_amount}
-              onChange={handleEditProductChange}
-            />
-            <textarea
-              name="remarks"
-              value={editingProduct.remarks}
-              onChange={handleEditProductChange}
-            />
-            <button type="submit">Save</button>
-            <button type="button" onClick={() => setEditingProduct(null)}>
-              Cancel
-            </button>
-          </form>
+  if (currentView === 'returns') {
+    return (
+      <div className="admin-panel">
+        <div className="admin-header-buttons">
+          <button className="dashboard-btn" onClick={() => setCurrentView('dashboard')}>
+            ← Back to Dashboard
+          </button>
+          <button className="add-return-btn" onClick={() => navigate("/returns-panel")}>
+            Add New Return
+          </button>
         </div>
-      )}
 
-      {/* Edit user popup form */}
-      {editingUser && (
-        <div className="popup-form">
-          <h3>Edit User</h3>
-          <form onSubmit={handleEditUserSubmit}>
-            <input
-              type="text"
-              name="name"
-              value={editingUser.name}
-              onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-              required
-            />
-            <select
-              name="role"
-              value={editingUser.role}
-              onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
-              required
-            >
-              <option value="admin">Administrator</option>
-              <option value="employee">Instructor</option>
-              <option value="supervisor">Admin</option>
-            </select>
-            <button type="submit">Save</button>
-            <button type="button" onClick={() => setEditingUser(null)}>Cancel</button>
-          </form>
+        <h2>Returns Management</h2>
+        
+        <div className="returns-navigation">
+          <button 
+            onClick={() => navigate("/manage-returns")}
+            className="manage-returns-btn"
+          >
+            <i className="fas fa-list"></i>
+            View All Returns
+          </button>
+          
+          <button 
+            onClick={() => navigate("/returns-panel")}
+            className="add-return-btn"
+          >
+            <i className="fas fa-plus"></i>
+            Add New Return
+          </button>
         </div>
-      )}
 
-      {/* Edit employee popup form */}
-      {editingEmployee && (
-        <div className="popup-form">
-          <h3>Edit Employee</h3>
-          <form onSubmit={handleEditEmployeeSubmit}>
-            <input
-              name="name"
-              value={editingEmployee.name}
-              onChange={handleEditEmployeeChange}
-              required
-            />
-            <input
-              name="position"
-              value={editingEmployee.position}
-              onChange={handleEditEmployeeChange}
-            />
-            <input
-              name="department"
-              value={editingEmployee.department}
-              onChange={handleEditEmployeeChange}
-            />
-            <input
-              name="email"
-              value={editingEmployee.email}
-              onChange={handleEditEmployeeChange}
-            />
-            <input
-              name="contact_number"
-              value={editingEmployee.contact_number}
-              onChange={handleEditEmployeeChange}
-            />
-            <input
-              name="address"
-              value={editingEmployee.address}
-              onChange={handleEditEmployeeChange}
-            />
-            <button type="submit">Save</button>
-            <button type="button" onClick={() => setEditingEmployee(null)}>Cancel</button>
-          </form>
+        <div className="returns-info">
+          <div className="info-card">
+            <h3>Returns Overview</h3>
+            <p>Manage all product returns and receipts from this section.</p>
+            <ul>
+              <li>View all submitted returns</li>
+              <li>Add new return entries</li>
+              <li>Track return status</li>
+              <li>Generate return reports</li>
+            </ul>
+          </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  // Fallback to dashboard if no specific view is selected
+  return <AdminDashboard onViewChange={setCurrentView} />;
 };
 
 export default AdminPanel;

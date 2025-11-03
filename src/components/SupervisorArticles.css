@@ -1,77 +1,166 @@
 .supervisor-articles {
-  width: 90%;
-  max-width: 1400px;
+  width: 95%;
+  max-width: 1800px;
   margin: 20px auto;
-  padding: 15px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 25px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(30, 60, 114, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   overflow-x: auto;
 }
 
 /* ✅ Title & Search Bar */
 .supervisor-articles h2 {
   text-align: center;
-  color: #333;
-  font-size: 22px;
-  margin-bottom: 10px;
+  color: #1e3c72;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 25px;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .supervisor-articles input {
   width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  padding: 15px 20px;
+  margin-bottom: 25px;
+  border: 2px solid rgba(102, 126, 234, 0.2);
+  border-radius: 12px;
   font-size: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
-/* ✅ Table Adjustments */
+.supervisor-articles input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: white;
+}
+
+/* ✅ Modern Table Styling */
 .supervisor-articles table {
   width: 100%;
   border-collapse: collapse;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
   font-size: 14px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-/* ✅ Table Headers */
+/* ✅ Enhanced Table Headers */
 .supervisor-articles th {
-  background: #007bff;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
   color: white;
-  padding: 12px;
+  padding: 18px 12px;
   text-align: center;
-  font-weight: bold;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 3px solid #1a365d;
 }
 
-/* ✅ Table Cells */
+/* ✅ Enhanced Table Cells */
 .supervisor-articles td {
-  padding: 10px;
+  padding: 14px 10px;
   text-align: center;
-  border: 1px solid #ddd;
-  white-space: nowrap; /* ✅ Prevents text wrapping */
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  font-weight: 500;
 }
 
-/* ✅ Alternate Row Colors */
+/* ✅ Row Styling */
 .supervisor-articles tbody tr:nth-child(even) {
-  background: #f8f9fa;
+  background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
+.supervisor-articles tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* ✅ Enhanced Hover Effects */
 .supervisor-articles tbody tr:hover {
-  background: #e6f7ff;
+  background: linear-gradient(90deg, #e6fffa 0%, #f0fff4 100%);
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  z-index: 10;
+  position: relative;
 }
 
-/* 📱 Responsive */
-@media (max-width: 1024px) {
+/* ✅ Responsive Design */
+@media screen and (max-width: 1400px) {
   .supervisor-articles {
-      width: 95%;
-      padding: 10px;
+    width: 98%;
+    padding: 20px;
   }
   
   .supervisor-articles table {
-      font-size: 12px;
+    font-size: 13px;
   }
+  
+  .supervisor-articles th,
+  .supervisor-articles td {
+    padding: 12px 8px;
+  }
+}
 
-  .supervisor-articles th, .supervisor-articles td {
-      padding: 8px;
+@media screen and (max-width: 1024px) {
+  .supervisor-articles {
+    width: 99%;
+    padding: 15px;
+  }
+  
+  .supervisor-articles h2 {
+    font-size: 1.6rem;
+  }
+  
+  .supervisor-articles table {
+    font-size: 12px;
+  }
+  
+  .supervisor-articles th,
+  .supervisor-articles td {
+    padding: 10px 6px;
+    max-width: 120px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .supervisor-articles {
+    margin: 10px;
+    padding: 10px;
+  }
+  
+  .supervisor-articles h2 {
+    font-size: 1.4rem;
+  }
+  
+  .supervisor-articles input {
+    padding: 12px 15px;
+    font-size: 14px;
+  }
+  
+  .supervisor-articles table {
+    font-size: 11px;
+  }
+  
+  .supervisor-articles th,
+  .supervisor-articles td {
+    padding: 8px 4px;
+    max-width: 100px;
   }
 }

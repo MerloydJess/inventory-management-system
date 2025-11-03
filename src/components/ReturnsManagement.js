@@ -13,6 +13,7 @@ const ReturnsManagement = () => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterOption, setFilterOption] = useState('all');
+  const [expandedReturns, setExpandedReturns] = useState({});
 
   const fetchReturns = useCallback(async () => {
     try {
@@ -90,6 +91,13 @@ const ReturnsManagement = () => {
     });
   };
 
+  const toggleReturnDetails = (returnId) => {
+    setExpandedReturns(prev => ({
+      ...prev,
+      [returnId]: !prev[returnId]
+    }));
+  };
+
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -99,23 +107,27 @@ const ReturnsManagement = () => {
       }
 
       const updatedReturn = {
-        rrspNo: editingReturn.rrspNo,
+        rrsp_no: editingReturn.rrspNo,
         date: editingReturn.date,
         description: editingReturn.description || '',
         quantity: parseInt(editingReturn.quantity) || 0,
-        icsNo: editingReturn.icsNo || '',
-        dateAcquired: editingReturn.dateAcquired,
+        ics_no: editingReturn.icsNo || '',
+        date_acquired: editingReturn.dateAcquired,
         amount: parseFloat(editingReturn.amount) || 0,
-        endUser: editingReturn.endUser,
-        remarks: editingReturn.remarks || '',
-        id: editingReturn.id
+        end_user: editingReturn.endUser,
+        remarks: editingReturn.remarks || ''
       };
 
+      console.log('Updating return with data:', updatedReturn);
+
       const response = await axios.put(
-        `${API_BASE_URL}/edit-return/${editingReturn.id}`,
+        `${API_BASE_URL}/api/returns/${editingReturn.id}`,
         updatedReturn,
         {
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
         }
       );
 
@@ -127,11 +139,12 @@ const ReturnsManagement = () => {
     } catch (error) {
       console.error('Error updating return:', error);
       if (error.response) {
-        alert(`Update failed: ${error.response.data.message || 'Server error'}`);
+        console.error('Response data:', error.response.data);
+        alert(`Update failed: ${error.response.data.error || error.response.data.message || 'Server error'}`);
       } else if (error.request) {
         alert('No response from server. Please check your connection.');
       } else {
-        alert('Error updating return. Please try again.');
+        alert('Error setting up the request');
       }
     }
   };
@@ -206,21 +219,33 @@ const ReturnsManagement = () => {
                 <div key={returnItem.id} className="return-card">
                   <div className="return-header">
                     <div className="return-title">RRSP No: {returnItem.rrspNo}</div>
-                    <button onClick={() => handleEditReturn(returnItem)} className="edit-btn">✏️ Edit</button>
+                    <div className="card-actions">
+                      <button 
+                        onClick={() => toggleReturnDetails(returnItem.id)} 
+                        className="details-btn"
+                      >
+                        <i className={`fas fa-${expandedReturns[returnItem.id] ? 'eye-slash' : 'eye'}`}></i>
+                        {expandedReturns[returnItem.id] ? "Hide Details" : "Show Details"}
+                      </button>
+                      <button onClick={() => handleEditReturn(returnItem)} className="edit-btn">
+                        <i className="fas fa-edit"></i>
+                        Edit
+                      </button>
+                    </div>
                   </div>
                   <div className="return-details">
-                    <div><strong>Date:</strong> {returnItem.date}</div>
-                    <div><strong>Description:</strong> {returnItem.description}</div>
-                    <div><strong>Quantity:</strong> {returnItem.quantity}</div>
-                    <div><strong>ICS No:</strong> {returnItem.ics_no}</div>
-                    <div><strong>Date Acquired:</strong> {returnItem.date_acquired}</div>
-                    <div><strong>Amount:</strong> ₱{parseFloat(returnItem.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    <div><strong>End User:</strong> {returnItem.end_user}</div>
-                    <div><strong>Remarks:</strong> {returnItem.remarks}</div>
+                    <div><strong>Date:</strong><div>{returnItem.date}</div></div>
+                    <div><strong>Description:</strong><div>{returnItem.description}</div></div>
+                    <div><strong>Quantity:</strong><div>{returnItem.quantity}</div></div>
+                    <div><strong>End User:</strong><div>{returnItem.end_user}</div></div>
+                    <div><strong>Amount:</strong><div>₱{parseFloat(returnItem.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+                    <div><strong>Remarks:</strong><div>{returnItem.remarks || "—"}</div></div>
+                  </div>
                     
+                  {expandedReturns[returnItem.id] && (
                     <div className="return-signatures">
                       <div className="signature-section">
-                        <h4>Returned By</h4>
+                        <h4>📤 Returned By</h4>
                         <div><strong>Name:</strong> {returnItem.returned_by}</div>
                         <div><strong>Position:</strong> {returnItem.returned_by_position}</div>
                         <div><strong>Date:</strong> {returnItem.returned_by_date}</div>
@@ -228,7 +253,7 @@ const ReturnsManagement = () => {
                       </div>
                       
                       <div className="signature-section">
-                        <h4>Received By</h4>
+                        <h4>📥 Received By</h4>
                         <div><strong>Name:</strong> {returnItem.received_by}</div>
                         <div><strong>Position:</strong> {returnItem.received_by_position}</div>
                         <div><strong>Date:</strong> {returnItem.received_by_date}</div>
@@ -237,15 +262,21 @@ const ReturnsManagement = () => {
 
                       {returnItem.second_received_by && (
                         <div className="signature-section">
-                          <h4>Second Receiver</h4>
+                          <h4>📥 Second Receiver</h4>
                           <div><strong>Name:</strong> {returnItem.second_received_by}</div>
                           <div><strong>Position:</strong> {returnItem.second_received_by_position}</div>
                           <div><strong>Date:</strong> {returnItem.second_received_by_date}</div>
                           <div><strong>Location:</strong> {returnItem.second_received_by_location}</div>
                         </div>
                       )}
+                      
+                      <div className="signature-section">
+                        <h4>📋 Additional Details</h4>
+                        <div><strong>ICS No:</strong> {returnItem.ics_no || "—"}</div>
+                        <div><strong>Date Acquired:</strong> {returnItem.date_acquired || "—"}</div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

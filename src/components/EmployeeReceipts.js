@@ -43,52 +43,81 @@ const EmployeeReceipts = ({ userName }) => {
 
   return (
     <div className="employee-receipts">
-      <h2>Your Receipts</h2>
-      <input
-        type="text"
-        placeholder="Search receipts..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
+      <h2>
+        <i className="fas fa-receipt"></i>
+        Your Receipts
+      </h2>
+      
+      <div className="search-section">
+        <i className="fas fa-search"></i>
+        <input
+          type="text"
+          placeholder="Search receipts by name, description, RRSP number..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
 
       <div className="receipt-list">
-        {filteredReceipts.map((receipt) => (
-          <div className="receipt-bubble" key={receipt.id || receipt.rrsp_no}>
-            <div className="receipt-main">
-              <div><strong>RRSP No.:</strong> {receipt.rrsp_no}</div>
-              <div><strong>Date:</strong> {receipt.date}</div>
-              <div><strong>Receipt Name:</strong> {receipt.end_user}</div>
-              <div><strong>Description:</strong> {receipt.description}</div>
+        {filteredReceipts.length > 0 ? (
+          filteredReceipts.map((receipt) => (
+            <div className="receipt-bubble" key={receipt.id || receipt.rrsp_no}>
+              <div className="receipt-main">
+                <div>
+                  <strong data-icon="📋">RRSP No.:</strong>
+                  <div>{receipt.rrsp_no}</div>
+                </div>
+                <div>
+                  <strong data-icon="📅">Date:</strong>
+                  <div>{receipt.date}</div>
+                </div>
+                <div>
+                  <strong data-icon="👤">Receipt Name:</strong>
+                  <div>{receipt.end_user}</div>
+                </div>
+                <div>
+                  <strong data-icon="📝">Description:</strong>
+                  <div>{receipt.description}</div>
+                </div>
+              </div>
+              
               <button
                 className="view-details-btn"
                 onClick={() => toggleExpand(receipt.id || receipt.rrsp_no)}
               >
+                <i className={`fas fa-${expanded[receipt.id || receipt.rrsp_no] ? 'eye-slash' : 'eye'}`}></i>
                 {expanded[receipt.id || receipt.rrsp_no] ? "Hide Details" : "View Details"}
               </button>
+
+              {expanded[receipt.id || receipt.rrsp_no] && (
+                <div className="receipt-details">
+                  <div><strong>Quantity:</strong><div>{receipt.quantity}</div></div>
+                  <div><strong>ICS No.:</strong><div>{receipt.ics_no}</div></div>
+                  <div><strong>Date Acquired:</strong><div>{receipt.date_acquired}</div></div>
+                  <div><strong>Amount:</strong><div>₱{parseFloat(receipt.amount || 0).toFixed(2)}</div></div>
+                  <div><strong>Remarks:</strong><div>{receipt.remarks || "—"}</div></div>
+                  <div><strong>Returned By:</strong><div>{receipt.returned_by}</div></div>
+                  <div><strong>Returned By Position:</strong><div>{receipt.returned_by_position}</div></div>
+                  <div><strong>Returned By Date:</strong><div>{receipt.returned_by_date}</div></div>
+                  <div><strong>Returned By Location:</strong><div>{receipt.location}</div></div>
+                  <div><strong>Received By:</strong><div>{receipt.received_by}</div></div>
+                  <div><strong>Received By Position:</strong><div>{receipt.received_by_position}</div></div>
+                  <div><strong>Received By Date:</strong><div>{receipt.received_by_date}</div></div>
+                  <div><strong>Received By Location:</strong><div>{receipt.location}</div></div>
+                  <div><strong>Second Received By:</strong><div>{receipt.second_received_by || "—"}</div></div>
+                  <div><strong>Second Received By Position:</strong><div>{receipt.second_received_by_position || "—"}</div></div>
+                  <div><strong>Second Received By Date:</strong><div>{receipt.second_received_by_date || "—"}</div></div>
+                  <div><strong>Second Received By Location:</strong><div>{receipt.location}</div></div>
+                </div>
+              )}
             </div>
-            {expanded[receipt.id || receipt.rrsp_no] && (
-              <div className="receipt-details">
-                <div><strong>Quantity:</strong> {receipt.quantity}</div>
-                <div><strong>ICS No.:</strong> {receipt.ics_no}</div>
-                <div><strong>Date Acquired:</strong> {receipt.date_acquired}</div>
-                <div><strong>Amount:</strong> ₱{parseFloat(receipt.amount).toFixed(2)}</div>
-                <div><strong>Remarks:</strong> {receipt.remarks}</div>
-                <div><strong>Returned By:</strong> {receipt.returned_by}</div>
-                <div><strong>Returned By Position:</strong> {receipt.returned_by_position}</div>
-                <div><strong>Returned By Date:</strong> {receipt.returned_by_date}</div>
-                <div><strong>Returned By Location:</strong> {receipt.location}</div>
-                <div><strong>Received By:</strong> {receipt.received_by}</div>
-                <div><strong>Received By Position:</strong> {receipt.received_by_position}</div>
-                <div><strong>Received By Date:</strong> {receipt.received_by_date}</div>
-                <div><strong>Received By Location:</strong> {receipt.location}</div>
-                <div><strong>Second Received By:</strong> {receipt.second_received_by || "—"}</div>
-                <div><strong>Second Received By Position:</strong> {receipt.second_received_by_position || "—"}</div>
-                <div><strong>Second Received By Date:</strong> {receipt.second_received_by_date || "—"}</div>
-                <div><strong>Second Received By Location:</strong> {receipt.location}</div>
-              </div>
-            )}
+          ))
+        ) : (
+          <div className="no-receipts">
+            <i className="fas fa-receipt"></i>
+            <p>No receipts found for your search criteria.</p>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

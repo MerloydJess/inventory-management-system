@@ -1,53 +1,275 @@
-/* 🌟 Main Container */
+/* ===== 🧾 Enhanced Employee Receipts ===== */
 .employee-receipts {
-  width: 90%;
-  max-width: 1400px;
-  margin: 20px auto;
-  padding: 15px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-  overflow-x: auto;
+  padding: 0;
+  background: transparent;
 }
 
-/* ✅ Title & Search (optional addition if needed) */
 .employee-receipts h2 {
-  text-align: center;
   color: #333;
-  font-size: 22px;
-  margin-bottom: 10px;
+  font-size: 28px;
+  margin-bottom: 24px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+}
+
+.employee-receipts h2 i {
+  color: #667eea;
+  font-size: 24px;
+}
+
+.employee-receipts .search-section {
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.employee-receipts .search-section i {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #667eea;
+  font-size: 16px;
+  z-index: 2;
 }
 
 .employee-receipts input {
   width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 16px;
+  padding: 16px 16px 16px 48px;
+  border: 2px solid rgba(102, 126, 234, 0.2);
+  border-radius: 12px;
+  font-size: 15px;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+  font-weight: 500;
 }
 
-/* 📄 Table Styling */
-.employee-receipts table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
+.employee-receipts input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: white;
+  transform: translateY(-1px);
+}
+
+.employee-receipts .receipt-list {
+  display: grid;
+  gap: 20px;
+}
+
+.employee-receipts .receipt-bubble {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.employee-receipts .receipt-bubble::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.employee-receipts .receipt-bubble:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  border-color: rgba(102, 126, 234, 0.2);
+}
+
+.employee-receipts .receipt-main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.employee-receipts .receipt-main > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.employee-receipts .receipt-main strong {
+  color: #333;
+  font-weight: 600;
   font-size: 14px;
-  table-layout: auto; /* Let the table adjust column width */
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* 📌 Table Headers */
-.employee-receipts th {
-  background: #007bff;
+.employee-receipts .receipt-main strong::before {
+  content: attr(data-icon);
+  color: #667eea;
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.employee-receipts .receipt-main div:not(:has(strong)) {
+  color: #666;
+  font-weight: 500;
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+.employee-receipts .view-details-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 12px;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+.employee-receipts .view-details-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.employee-receipts .view-details-btn i {
+  font-size: 14px;
+  transition: transform 0.3s ease;
+}
+
+.employee-receipts .view-details-btn:hover i {
+  transform: scale(1.1);
+}
+
+.employee-receipts .receipt-details {
+  background: rgba(102, 126, 234, 0.03);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 16px;
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.employee-receipts .receipt-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.employee-receipts .receipt-details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.employee-receipts .receipt-details strong {
+  color: #333;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.employee-receipts .receipt-details div:not(:has(strong)) {
+  color: #666;
+  font-weight: 500;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.employee-receipts .no-receipts {
   text-align: center;
-  font-weight: bold;
-  border-bottom: 2px solid #0056b3;
-  word-break: break-word;
-  min-width: 120px; /* Minimum width for headers */
-  vertical-align: middle; /* Center align vertically */
-  white-space: normal; /* Allow text to wrap within the header */
+  padding: 60px 20px;
+  color: #666;
+}
+
+.employee-receipts .no-receipts i {
+  font-size: 64px;
+  color: #ddd;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.employee-receipts .no-receipts p {
+  font-size: 18px;
+  margin: 0;
+  font-style: italic;
+}
+
+/* 📱 Responsive Design */
+@media (max-width: 768px) {
+  .employee-receipts h2 {
+    font-size: 24px;
+    text-align: center;
+  }
+
+  .employee-receipts .receipt-main {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .employee-receipts .receipt-details {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .employee-receipts .receipt-bubble {
+    padding: 16px;
+    margin: 0 -8px;
+  }
+
+  .employee-receipts .view-details-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    align-self: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .employee-receipts h2 {
+    font-size: 20px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .employee-receipts .receipt-bubble {
+    padding: 12px;
+    margin: 0 -12px;
+    border-radius: 12px;
+  }
+
+  .employee-receipts input {
+    padding: 12px 12px 12px 40px;
+    font-size: 14px;
+  }
+
+  .employee-receipts .search-section i {
+    left: 12px;
+    font-size: 14px;
+  }
 }
 
 /* 📌 Table Cells */

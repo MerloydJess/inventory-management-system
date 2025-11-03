@@ -283,15 +283,21 @@ const ArticlesManagement = () => {
                   <td>{product.on_hand_per_count || '0'}</td>
                   <td>₱{product.total_amount_formatted}</td>
                   <td className="user-cell">
-                    {product.actual_user ? (
+                    {product.actual_user && product.actual_user !== 'No User Assigned' ? (
                       <>
-                        <div className="user-name" style={{fontWeight: 'bold'}}>{product.actual_user}</div>
+                        <div className="user-name" style={{fontWeight: 'bold', color: '#000'}}>
+                          {product.actual_user}
+                        </div>
                         <div className="user-details">
                           {product.employee_position && (
-                            <div className="user-position">{product.employee_position}</div>
+                            <div className="user-position" style={{color: '#666', fontSize: '12px'}}>
+                              {product.employee_position}
+                            </div>
                           )}
                           {product.employee_department && (
-                            <div className="user-department">{product.employee_department}</div>
+                            <div className="user-department" style={{color: '#666', fontSize: '12px'}}>
+                              {product.employee_department}
+                            </div>
                           )}
                         </div>
                       </>
